@@ -1,0 +1,41 @@
+[PARAM_DEFS]
+name = swirl, value = 1.0, type = float, min = -10.0, max = 10.0
+name = freq, value = 2.0, type = float, min = -10.0, max = 10.0
+name = scale, value = 1.0, type = float, min = -3.0, max = 3.0
+
+[VARIATION_CODE]
+// --- Start of inlined swirl logic ---
+if (swirl != 0.0)
+{
+  float r = hypot(_tx, _ty);
+  float angle = swirl * sin(freq * r);
+  float s = sin(angle);
+  float c = cos(angle);
+  
+  float warped_x = _tx * c - _ty * s;
+  float warped_y = _tx * s + _ty * c;
+
+  // Apply an exponential map to the warped coordinates
+  float re_in = warped_x * scale;
+  float im_in = warped_y * scale;
+
+  float exp_re_in = exp(re_in);
+  _vx += amount * exp_re_in * cos(im_in);
+  _vy += amount * exp_re_in * sin(im_in);
+}
+else // If swirl is zero, skip the warp to save calculations
+{
+  float re_in = _tx * scale;
+  float im_in = _ty * scale;
+
+  float exp_re_in = exp(re_in);
+  _vx += amount * exp_re_in * cos(im_in);
+  _vy += amount * exp_re_in * sin(im_in);
+}
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
+hypot
