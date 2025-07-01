@@ -1,0 +1,169 @@
+[PARAM_DEFS]
+name = c1, value = 2.0, type = float, min = 1.0, max = 19.0
+name = c2, value = 1.0, type = float, min = -2.5, max = 2.5
+
+[VARIATION_CODE]
+// Constant lookup table for Riemann Zeta Z(0) to Z(33)
+const float RzPosInt[] = float[](
+	-0.5, 0.0, 1.6449340668, 1.2020569031, 1.0823232337,
+	1.0369277551, 1.0173430619, 1.0083492773, 1.0040773561,
+	1.0020083928, 1.0009945751, 1.0004941886, 1.0002460865,
+	1.0001227133, 1.0000612481, 1.0000305882, 1.0000152822,
+	1.0000076371, 1.0000038172, 1.0000019082, 1.0000009539,
+	1.0000004769, 1.0000002384, 1.0000001192, 1.0000000596,
+	1.0000000298, 1.0000000149, 1.0000000074, 1.0000000037,
+	1.0000000018, 1.0000000009, 1.0000000004, 1.0000000002,
+	1.0000000001
+);
+// Constant lookup table for Riemann Zeta Z(-1), Z(-3), ... Z(-199)
+const float RzNegOdd[] = float[](
+	-0.0833333333, 0.0083333333, -0.0039682539, 0.0041666666,
+	-0.0075757575, 0.0210927960, -0.0833333333, 0.4432598039,
+	-3.0539543302, 26.456212121, -281.46014492, 3607.5105463,
+	-54827.583333, 974936.82385, -2.0052695e+7, 4.7238486e+8,
+	-1.2635724e+10, 3.8087931e+11, -1.2850850e+13, 4.8241448e+14,
+	-2.0040310e+16, 9.1677436e+17, -4.5979888e+19, 2.5180471e+21,
+	-1.5001733e+23, 9.6899578e+24, -6.7645882e+26, 5.0890659e+28,
+	-4.1147288e+30, 3.5666582e+32, -3.3066089e+34, 3.2715634e+36,
+	-3.4473782e+38, 3.8614279e+40, -4.5892974e+42, 5.7775386e+44,
+	-7.6919858e+46, 1.0813635e+49, -1.6029364e+51, 2.5019479e+53,
+	-4.1067052e+55, 7.0798774e+57, -1.2804546e+60, 2.4267340e+62,
+	-4.8143218e+64, 9.9875574e+66, -2.1645634e+69, 4.8962327e+71,
+	-1.1549023e+74, 2.8382249e+76, -7.2612008e+78, 1.9323514e+81,
+	-5.3450160e+83, 1.5356028e+86, -4.5789872e+88, 1.4162025e+91,
+	-4.5400652e+93, 1.5076656e+96, -5.1830949e+98, 1.8435647e+101,
+	-6.7805554e+103, 2.5773326e+106, -1.0119112e+109, 4.1016346e+111,
+	-1.7155244e+114, 7.4003425e+116, -3.2909225e+119, 1.5079831e+122,
+	-7.1169879e+124, 3.4580429e+127, -1.7290907e+130, 8.8936991e+132,
+	-4.7038470e+135, 2.5571938e+138, -1.4284067e+141, 8.1952152e+143,
+	-4.8276485e+146, 2.9189612e+149, -1.8108932e+152, 1.1523577e+155,
+	-7.5192311e+157, 5.0294016e+160, -3.4473420e+163, 2.4207458e+166,
+	-1.7409465e+169, 1.2819489e+172, -9.6624121e+174, 7.4526910e+177,
+	-5.8808393e+180, 4.7462718e+183, -3.9169132e+186, 3.3045071e+189,
+	-2.8492890e+192, 2.5103329e+195, -2.2593901e+198, 2.0769138e+201,
+	-1.9494732e+204, 1.8680731e+207, -1.8270752e+210, 1.8235386e+213
+);
+
+// Map parameters
+int N = int(c1);
+float zpow = c2;
+float vv = amount;
+vec2 z;
+
+// Complex power: z = (_tx, _ty)^zpow
+vec2 input_z = vec2(_tx, _ty);
+float r = length(input_z);
+float phi = atan(input_z.y, input_z.x);
+float r_p = pow(r, zpow);
+z = vec2(r_p * cos(zpow * phi), r_p * sin(zpow * phi));
+
+vec2 z_save = z;
+vec2 LiN = vec2(0.0, 0.0);
+
+// Main logic
+if (dot(z, z) > 250000.0 || N >= 20) {
+	_vx += vv * z.x;
+	_vy += vv * z.y;
+} else {
+	if (dot(z, z) < 0.07) {
+		// Path 1: Normal series expansion
+		vec2 z_current_pow = z;
+		for (int i = 1; i < 20; i++) {
+			float k_n = pow(float(i), float(N));
+			LiN += z_current_pow * (1.0 / k_n);
+			// Complex multiplication
+			float re = z_current_pow.x * z.x - z_current_pow.y * z.y;
+			float im = z_current_pow.x * z.y + z_current_pow.y * z.x;
+			z_current_pow = vec2(re, im);
+		}
+	} else {
+		// Path 2: Crandall's method
+		// Complex log: z_orig_log = log(z)
+		float r_log1 = length(z);
+		float phi_log1 = atan(z.y, z.x);
+		vec2 z_orig_log = vec2(log(r_log1), phi_log1);
+		
+		vec2 log_pow = vec2(1.0, 0.0);
+		vec2 zPl1 = vec2(0.0, 0.0);
+
+		for (int i = 0; i < 20; i++) {
+			// -- Inlined Riemann_Z(N - i) --
+			float zee;
+			int z_arg = N - i;
+			if (z_arg > 33) {
+				zee = 1.0;
+			} else if (z_arg < -200) {
+				zee = 1.0e38;
+			} else if (z_arg < 0) {
+				if ((-z_arg) % 2 == 0) {
+					zee = 0.0;
+				} else {
+					int M = (-z_arg - 1) / 2;
+					if (M >= 0 && M < 100) zee = RzNegOdd[M];
+					else zee = 1.0e38;
+				}
+			} else {
+				zee = RzPosInt[z_arg];
+			}
+			
+			if (zee != 0.0) {
+				// -- Inlined factorial(i) --
+				float fact_i = 1.0;
+				if (i > 1) {
+					for (int k = 2; k <= i; k++) {
+						fact_i *= float(k);
+					}
+				}
+				LiN += log_pow * (zee / fact_i);
+			}
+
+			if (i == N - 1) {
+				zPl1 = log_pow;
+			}
+			// Complex multiplication
+			float re = log_pow.x * z_orig_log.x - log_pow.y * z_orig_log.y;
+			float im = log_pow.x * z_orig_log.y + log_pow.y * z_orig_log.x;
+			log_pow = vec2(re, im);
+		}
+
+		// -- Inlined HarmonicS(N - 1) --
+		float HSTerm = 0.0;
+		if ((N - 1) >= 1) {
+			for (int i = 1; i <= (N - 1); i++) {
+				HSTerm += 1.0 / float(i);
+			}
+		}
+		
+		// -- Term calculation: log_neg_log = -log(-z_orig_log) --
+		vec2 temp1 = -z_orig_log;
+		float r_log2 = length(temp1);
+		float phi_log2 = atan(temp1.y, temp1.x);
+		vec2 temp2 = vec2(log(r_log2), phi_log2);
+		vec2 log_neg_log = -temp2;
+		log_neg_log.x += HSTerm;
+
+		// -- Inlined factorial(N - 1) --
+		float fact_N1 = 1.0;
+		if ((N - 1) > 1) {
+			for (int i = 2; i <= (N - 1); i++) {
+				fact_N1 *= float(i);
+			}
+		}
+		vec2 term2 = zPl1 * (1.0 / fact_N1);
+
+		// Complex multiplication
+		float re = term2.x * log_neg_log.x - term2.y * log_neg_log.y;
+		float im = term2.x * log_neg_log.y + term2.y * log_neg_log.x;
+		term2 = vec2(re, im);
+
+		LiN += term2;
+	}
+	_vx += vv * LiN.x;
+	_vy += vv * LiN.y;
+}
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
