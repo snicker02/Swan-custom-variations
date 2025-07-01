@@ -1,0 +1,121 @@
+[PARAM_DEFS]
+name = mode, value = 0.0, type = int, min = 0.0, max = 2.0
+name = iters, value = 10.0, type = int, min = 1.0, max = 100.0
+name = mb_scale, value = -1.5, type = float, min = -4.0, max = 4.0
+name = mb_fold_limit, value = 1.0, type = float, min = 0.0, max = 5.0
+name = mb_min_radius, value = 0.5, type = float, min = 0.0, max = 2.0
+name = mb_fixed_radius, value = 1.0, type = float, min = 0.0, max = 4.0
+name = mb_rotation, value = 0.0, type = float, min = -360.0, max = 360.0
+name = mb_julia, value = 0.0, type = int, min = 0.0, max = 1.0
+name = mb_julia_x, value = 0.4, type = float, min = -2.0, max = 2.0
+name = mb_julia_y, value = 0.6, type = float, min = -2.0, max = 2.0
+
+[VARIATION_CODE]
+// Initialize working variables from input coordinates
+float x = _tx;
+float y = _ty;
+
+// Set up Julia constants or use initial coordinates
+float cx = (mb_julia > 0.5) ? mb_julia_x : x;
+float cy = (mb_julia > 0.5) ? mb_julia_y : y;
+
+// Pre-calculate reused values
+float minRadius2 = sqr(mb_min_radius);
+float fixedRadius2 = sqr(mb_fixed_radius);
+float rotRad = radians(mb_rotation);
+float cos_r = cos(rotRad);
+float sin_r = sin(rotRad);
+
+// Main iteration loop
+int i = 0;
+while (i < int(iters)) {
+  
+  // --- Mode A ---
+  if (mode < 0.5) {
+    // Fold
+    if (x > mb_fold_limit) x = 2.0 * mb_fold_limit - x;
+    else if (x < -mb_fold_limit) x = -2.0 * mb_fold_limit - x;
+    if (y > mb_fold_limit) y = 2.0 * mb_fold_limit - y;
+    else if (y < -mb_fold_limit) y = -2.0 * mb_fold_limit - y;
+    
+    // Ball-fold / Sphere inversion
+    float r2 = sqr(x) + sqr(y);
+    if (r2 < minRadius2) {
+      float f = fixedRadius2 / minRadius2;
+      x *= f;
+      y *= f;
+    }
+    
+    // Scale, Rotate, and Translate
+    x *= mb_scale;
+    y *= mb_scale;
+    float xn = x * cos_r - y * sin_r;
+    y = x * sin_r + y * cos_r;
+    x = xn;
+    x += cx;
+    y += cy;
+  }
+  // --- Mode B ---
+  else if (mode < 1.5) {
+    // Scale and Translate
+    x *= mb_scale;
+    y *= mb_scale;
+    x += cx;
+    y += cy;
+    
+    // Rotate
+    float xn = x * cos_r - y * sin_r;
+    y = x * sin_r + y * cos_r;
+    x = xn;
+    
+    // Fold
+    if (x > mb_fold_limit) x = 2.0 * mb_fold_limit - x;
+    else if (x < -mb_fold_limit) x = -2.0 * mb_fold_limit - x;
+    if (y > mb_fold_limit) y = 2.0 * mb_fold_limit - y;
+    else if (y < -mb_fold_limit) y = -2.0 * mb_fold_limit - y;
+
+    // Ball-fold / Sphere inversion
+    float r2 = sqr(x) + sqr(y);
+    if (r2 < minRadius2) {
+      float f = fixedRadius2 / r2;
+      x *= f;
+      y *= f;
+    }
+  }
+  // --- Mode C ---
+  else {
+    // Fold and Translate
+    if (x > mb_fold_limit) x = 2.0 * mb_fold_limit - x;
+    else if (x < -mb_fold_limit) x = -2.0 * mb_fold_limit - x;
+    if (y > mb_fold_limit) y = 2.0 * mb_fold_limit - y;
+    else if (y < -mb_fold_limit) y = -2.0 * mb_fold_limit - y;
+    x += cx;
+    y += cy;
+    
+    // Scale and Rotate
+    x *= mb_scale;
+    y *= mb_scale;
+    float xn = x * cos_r - y * sin_r;
+    y = x * sin_r + y * cos_r;
+    x = xn;
+    
+    // Ball-fold / Sphere inversion
+    float r2 = sqr(x) + sqr(y);
+    if (r2 < minRadius2) {
+      float f = fixedRadius2 / r2;
+      x *= f;
+      y *= f;
+    }
+  }
+  i++;
+}
+
+// Add the final transformed point to the output vector, scaled by amount
+_vx += x * amount;
+_vy += y * amount;
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
