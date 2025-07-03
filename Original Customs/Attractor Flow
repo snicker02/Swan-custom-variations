@@ -1,0 +1,91 @@
+[PARAM_DEFS]
+name = attractorMode, value = 0, type = int, min = 0, max = 3
+name = waveMode, value = 0, type = int, min = 0, max = 3
+name = yScale, value = -1.7, type = float, min = -3.0, max = 3.0
+name = xScale, value = 1.8, type = float, min = -3.0, max = 3.0
+name = xAmplitude, value = -0.5, type = float, min = -3.0, max = 3.0
+name = yAmplitude, value = -1.9, type = float, min = -3.0, max = 3.0
+name = freqX, value = 1.0, type = float, min = -5.0, max = 5.0
+name = freqY, value = 1.0, type = float, min = -5.0, max = 5.0
+name = phaseX, value = 0.0, type = float, min = -3.14, max = 3.14
+name = phaseY, value = 0.0, type = float, min = -3.14, max = 3.14
+
+[VARIATION_CODE]
+float newX, newY;
+float PI = 3.14159265;
+float TWO_PI = 6.2831853;
+float PI_2 = 1.5707963;
+
+// --- Attractor and Wave Logic ---
+if (attractorMode == 1) { // Peter de Jong
+  if (waveMode == 1) { // Square
+    newX = sign(sin(yScale * _ty)) - sign(sin(xScale * _tx + PI_2));
+    newY = sign(sin(xAmplitude * _tx)) - sign(sin(yAmplitude * _ty + PI_2));
+  } else if (waveMode == 2) { // Triangle
+    newX = (asin(sin(yScale * _ty)) * (2.0/PI)) - (asin(sin(xScale * _tx + PI_2)) * (2.0/PI));
+    newY = (asin(sin(xAmplitude * _tx)) * (2.0/PI)) - (asin(sin(yAmplitude * _ty + PI_2)) * (2.0/PI));
+  } else if (waveMode == 3) { // Sawtooth
+    float val1 = yScale * _ty; float val2 = xScale * _tx + PI_2;
+    float val3 = xAmplitude * _tx; float val4 = yAmplitude * _ty + PI_2;
+    newX = (2.0 * (val1 / TWO_PI - floor(0.5 + val1 / TWO_PI))) - (2.0 * (val2 / TWO_PI - floor(0.5 + val2 / TWO_PI)));
+    newY = (2.0 * (val3 / TWO_PI - floor(0.5 + val3 / TWO_PI))) - (2.0 * (val4 / TWO_PI - floor(0.5 + val4 / TWO_PI)));
+  } else { // Sine
+    newX = sin(yScale * _ty) - cos(xScale * _tx);
+    newY = sin(xAmplitude * _tx) - cos(yAmplitude * _ty);
+  }
+} 
+else if (attractorMode == 2) { // Svensson
+  if (waveMode == 1) { // Square
+    newX = yAmplitude * sign(sin(yScale * _tx)) - sign(sin(xScale * _ty));
+    newY = xAmplitude * sign(sin(yScale * _tx + PI_2)) + sign(sin(xScale * _ty + PI_2));
+  } else if (waveMode == 2) { // Triangle
+    newX = yAmplitude * (asin(sin(yScale * _tx)) * (2.0/PI)) - (asin(sin(xScale * _ty)) * (2.0/PI));
+    newY = xAmplitude * (asin(sin(yScale * _tx + PI_2)) * (2.0/PI)) + (asin(sin(xScale * _ty + PI_2)) * (2.0/PI));
+  } else if (waveMode == 3) { // Sawtooth
+    float val1 = yAmplitude * (2.0 * ( (yScale*_tx) / TWO_PI - floor(0.5 + (yScale*_tx) / TWO_PI)));
+    float val2 = (2.0 * ( (xScale*_ty) / TWO_PI - floor(0.5 + (xScale*_ty) / TWO_PI)));
+    newX = val1 - val2;
+    float val3 = xAmplitude * (2.0 * ( (yScale*_tx+PI_2) / TWO_PI - floor(0.5 + (yScale*_tx+PI_2) / TWO_PI)));
+    float val4 = (2.0 * ( (xScale*_ty+PI_2) / TWO_PI - floor(0.5 + (xScale*_ty+PI_2) / TWO_PI)));
+    newY = val3 + val4;
+  } else { // Sine
+    newX = yAmplitude * sin(yScale * _tx) - sin(xScale * _ty);
+    newY = xAmplitude * cos(yScale * _tx) + cos(xScale * _ty);
+  }
+}
+else if (attractorMode == 3) { // Gumowski-Mira
+    // This attractor has its own unique formula and does not use waves.
+    // 'xAmplitude' is used for 'a' and 'yScale' is used for 'b'.
+    float g_x = xAmplitude * _tx + (2.0 * (1.0 - xAmplitude) * _tx * _tx) / (1.0 + _tx * _tx);
+    newY = (yScale * _ty) + g_x;
+    newX = -_tx + g_x;
+}
+else { // Clifford (Default)
+  if (waveMode == 1) { // Square
+    newX = sign(sin(yScale * _ty * freqY + phaseY)) + xAmplitude * sign(sin(yScale * _tx * freqX + phaseX + PI_2));
+    newY = sign(sin(xScale * _tx * freqX + phaseX)) + yAmplitude * sign(sin(xScale * _ty * freqY + phaseY + PI_2));
+  } else if (waveMode == 2) { // Triangle
+    newX = (asin(sin(yScale * _ty * freqY + phaseY)) * (2.0/PI)) + xAmplitude * (asin(sin(yScale * _tx * freqX + phaseX + PI_2)) * (2.0/PI));
+    newY = (asin(sin(xScale * _tx * freqX + phaseX)) * (2.0/PI)) + yAmplitude * (asin(sin(xScale * _ty * freqY + phaseY + PI_2)) * (2.0/PI));
+  } else if (waveMode == 3) { // Sawtooth
+    float val1 = yScale * _ty * freqY + phaseY;
+    float val2 = yScale * _tx * freqX + phaseX + PI_2;
+    newX = (2.0 * (val1/TWO_PI - floor(0.5+val1/TWO_PI))) + xAmplitude * (2.0 * (val2/TWO_PI - floor(0.5+val2/TWO_PI)));
+    float val3 = xScale * _tx * freqX + phaseX;
+    float val4 = xScale * _ty * freqY + phaseY + PI_2;
+    newY = (2.0 * (val3/TWO_PI - floor(0.5+val3/TWO_PI))) + yAmplitude * (2.0 * (val4/TWO_PI - floor(0.5+val4/TWO_PI)));
+  } else { // Sine
+    newX = sin(yScale * _ty * freqY + phaseY) + xAmplitude * cos(yScale * _tx * freqX + phaseX);
+    newY = sin(xScale * _tx * freqX + phaseX) + yAmplitude * cos(xScale * _ty * freqY + phaseY);
+  }
+}
+
+// Apply the final transformation
+_vx += (newX - _tx) * amount;
+_vy += (newY - _ty) * amount;
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
