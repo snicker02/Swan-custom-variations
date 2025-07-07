@@ -1,0 +1,58 @@
+[PARAM_DEFS]
+name = max_size, value = 0.5, type = float, min = 0.01, max = 2.0
+name = min_size, value = 0.1, type = float, min = 0.01, max = 2.0
+name = chaos, value = 5.0, type = float, min = 0.1, max = 20.0
+name = line_thickness, value = 0.02, type = float, min = 0.0, max = 0.2
+name = seed, value = 12345, type = int, min = 0, max = 100000
+
+[VARIATION_CODE]
+// --- Start of De Stijl Variation Code ---
+
+// Get initial point coordinates
+float x = _tx;
+float y = _ty;
+float fseed = float(seed);
+
+// Determine the "neighborhood" the point is in
+int region_ix = int(floor(x / chaos));
+int region_iy = int(floor(y / chaos));
+
+// Use the built-in random function to determine the local grid size
+float size_hash = random_0t1(vec2(region_ix, region_iy), fseed);
+float local_grid_size = min_size + (max_size - min_size) * size_hash;
+
+if (local_grid_size < 1.0e-6) local_grid_size = 1.0e-6;
+
+// Snap the point to the local, non-uniform grid
+float snapped_x = round(x / local_grid_size) * local_grid_size;
+float snapped_y = round(y / local_grid_size) * local_grid_size;
+
+float dist_to_line_x = abs(x - snapped_x);
+float dist_to_line_y = abs(y - snapped_y);
+
+float half_thickness = line_thickness * 0.025;
+
+// Check if the point is on a line
+if (dist_to_line_x < half_thickness || dist_to_line_y < half_thickness) {
+    // It's a line, color it black
+    _color = 0.0;
+} else { // It's inside a cell, so color it
+    // Get a deterministic random value for this specific cell
+    int ix = int(round(x / local_grid_size));
+    int iy = int(round(y / local_grid_size));
+    
+    // Use the random value to index the gradient
+    _color = random_0t1(vec2(ix, iy), fseed);
+}
+
+// Pass the original point through
+_vx += x * amount;
+_vy += y * amount;
+
+// --- End of De Stijl Variation Code ---
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
