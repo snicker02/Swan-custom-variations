@@ -1,0 +1,196 @@
+[PARAM_DEFS]
+name = shape, value = 0, type = int, min = 0, max = 9
+name = size, value = 1.0, type = float, min = 0.0, max = 10.0
+name = aspect, value = 1.0, type = float, min = 0.1, max = 10.0
+name = centerX, value = 0.0, type = float, min = -5.0, max = 5.0
+name = centerY, value = 0.0, type = float, min = -5.0, max = 5.0
+name = innerRadius, value = 0.0, type = float, min = 0.0, max = 2.0
+name = outerRadius, value = 1.0, type = float, min = 0.0, max = 2.0
+name = warpMode, value = 0, type = int, min = 0, max = 5
+name = warpAmount, value = 3.14159, type = float, min = -10.0, max = 10.0
+name = warpAmountX, value = 1.0, type = float, min = -5.0, max = 5.0
+name = warpAmountY, value = 1.0, type = float, min = -5.0, max = 5.0
+name = warpCenterX, value = 0.0, type = float, min = -5.0, max = 5.0
+name = warpCenterY, value = 0.0, type = float, min = -5.0, max = 5.0
+name = warpCurve, value = 1.0, type = float, min = 0.01, max = 10.0
+name = warpInvert, value = 0, type = int, min = 0, max = 1
+name = flowerPetals, value = 5, type = int, min = 2, max = 20
+name = starPoints, value = 5, type = int, min = 3, max = 20
+name = starDepth, value = 0.5, type = float, min = 0.0, max = 1.0
+name = cloudAmplitude, value = 0.2, type = float, min = 0.0, max = 2.0
+name = cloudFrequency, value = 5.0, type = float, min = 0.1, max = 20.0
+
+[VARIATION_CODE]
+// --- Start of ShapeWarp Variation Code ---
+
+// --- 1. Get Parameters and calculated values ---
+float currentAspect = (shape == 1 || shape == 2 || shape == 3) ? aspect : 1.0;
+float currentInnerRadius = max(0.0, innerRadius);
+float currentOuterRadius = max(currentInnerRadius + 1.0e-9, outerRadius);
+float currentWarpCurve = max(1.0e-6, warpCurve);
+bool invert = (warpInvert >= 0.5);
+
+// --- 2. Calculate coords relative to SHAPE center ---
+float shapeRelX = _tx - centerX;
+float shapeRelY = _ty - centerY;
+
+// --- 3. Calculate shape dimensions and distance metric ---
+float hw = max(1.0e-9, size * currentAspect * 0.5);
+float hh = max(1.0e-9, size * 0.5);
+float R = max(1.0e-9, size * 0.5); // Base radius
+float dist = 0.0; // Normalized distance
+
+// Pre-calculate polar coordinates
+float radius_polar = sqrt(shapeRelX * shapeRelX + shapeRelY * shapeRelY);
+float angle = 0.0;
+if (radius_polar > 1.0e-9) {
+    angle = atan(shapeRelY, shapeRelX);
+    if (angle < 0.0) angle += 2.0 * PI;
+}
+
+// --- Shape distance calculations ---
+if (shape == 2) { // Circle/Ellipse
+    float normX = shapeRelX / hw;
+    float normY = shapeRelY / hh;
+    dist = sqrt(normX*normX + normY*normY);
+} else if (shape == 3) { // Diamond
+    float normX = shapeRelX / hw;
+    float normY = shapeRelY / hh;
+    dist = abs(normX) + abs(normY);
+} else if (shape == 4) { // Triangle
+    if (radius_polar < 1.0e-9) { dist = 0.0; } else {
+        float sectorAngle = 2.0 * PI / 3.0;
+        float angle_diff = mod(angle, sectorAngle) - (PI / 3.0);
+        float shapeBoundaryR = R * cos(PI / 3.0) / max(1.0e-9, abs(cos(angle_diff)));
+        dist = radius_polar / max(1.0e-9, shapeBoundaryR);
+    }
+} else if (shape == 5) { // Pentagon
+    if (radius_polar < 1.0e-9) { dist = 0.0; } else {
+        float sectorAngle = 2.0 * PI / 5.0;
+        float angle_diff = mod(angle, sectorAngle) - (PI / 5.0);
+        float shapeBoundaryR = R * cos(PI / 5.0) / max(1.0e-9, abs(cos(angle_diff)));
+        dist = radius_polar / max(1.0e-9, shapeBoundaryR);
+    }
+} else if (shape == 6) { // Hexagon
+    if (radius_polar < 1.0e-9) { dist = 0.0; } else {
+        float sectorAngle = PI / 3.0;
+        float angle_diff = mod(angle, sectorAngle) - (PI / 6.0);
+        float shapeBoundaryR = R * cos(PI / 6.0) / max(1.0e-9, abs(cos(angle_diff)));
+        dist = radius_polar / max(1.0e-9, shapeBoundaryR);
+    }
+} else if (shape == 7) { // Flower
+    if (radius_polar < 1.0e-9) { dist = 0.0; } else {
+        float flowerBoundaryR = R * abs(cos(float(flowerPetals) * angle));
+        dist = radius_polar / max(1.0e-9, flowerBoundaryR);
+    }
+} else if (shape == 8) { // Star
+    if (radius_polar < 1.0e-9) { dist = 0.0; } else {
+        float k = float(starPoints);
+        float R_outer = R;
+        float R_inner = R * starDepth;
+        float anglePerVertex = PI / k;
+        int sectorIndex = int(floor(angle / anglePerVertex));
+        float angleInSector = angle - float(sectorIndex) * anglePerVertex;
+        float t = angleInSector / anglePerVertex;
+        float t_norm = 2.0 * abs(t - 0.5);
+        float starBoundaryR = (mod(float(sectorIndex), 2.0) == 0.0) ?
+            mix(R_outer, R_inner, t_norm) :
+            mix(R_inner, R_outer, t_norm);
+        dist = radius_polar / max(1.0e-9, starBoundaryR);
+    }
+} else if (shape == 9) { // Cloud
+    if (radius_polar < 1.0e-9) { dist = 0.0; } else {
+        float noise = 0.6 * sin(cloudFrequency * angle)
+                    + 0.3 * sin(2.1 * cloudFrequency * angle + 1.23)
+                    + 0.1 * sin(4.3 * cloudFrequency * angle + 4.56);
+        float cloudBoundaryR = R * (1.0 + cloudAmplitude * noise);
+        cloudBoundaryR = max(R * 0.1, cloudBoundaryR);
+        dist = radius_polar / cloudBoundaryR;
+    }
+} else { // Square (0) or Rectangle (1)
+    float normX = shapeRelX / hw;
+    float normY = shapeRelY / hh;
+    dist = max(abs(normX), abs(normY));
+}
+
+// --- 4. Calculate Warp Factor ---
+float warpFactor = 0.0;
+float range = currentOuterRadius - currentInnerRadius;
+if (dist <= currentInnerRadius) {
+    warpFactor = 0.0;
+} else if (dist >= currentOuterRadius) {
+    warpFactor = 1.0;
+} else {
+    if (range > 1.0e-9) {
+        warpFactor = (dist - currentInnerRadius) / range;
+    } else {
+        warpFactor = 1.0;
+    }
+}
+warpFactor = pow(warpFactor, currentWarpCurve);
+if (invert) {
+    warpFactor = 1.0 - warpFactor;
+}
+float effectiveWarp = warpFactor * warpAmount;
+float effectiveWarpX = warpFactor * warpAmountX;
+float effectiveWarpY = warpFactor * warpAmountY;
+
+// --- 5. Calculate coords relative to WARP center ---
+float warpRelX = _tx - warpCenterX;
+float warpRelY = _ty - warpCenterY;
+float warpedX_rc = warpRelX;
+float warpedY_rc = warpRelY;
+
+// --- 6. Apply the selected warp mode ---
+if (warpMode == 0) { // Rotate
+    float cosA = cos(effectiveWarp);
+    float sinA = sin(effectiveWarp);
+    warpedX_rc = warpRelX * cosA - warpRelY * sinA;
+    warpedY_rc = warpRelX * sinA + warpRelY * cosA;
+} else if (warpMode == 1) { // Scale Radial
+    float scaleFactor = max(1.0e-9, 1.0 + effectiveWarp);
+    warpedX_rc = warpRelX * scaleFactor;
+    warpedY_rc = warpRelY * scaleFactor;
+} else if (warpMode == 2) { // Swirl
+    float currentAngleSwirl = atan(warpRelY, warpRelX);
+    float radiusSwirl = sqrt(warpRelX * warpRelX + warpRelY * warpRelY);
+    float swirlAngle = currentAngleSwirl + effectiveWarp;
+    warpedX_rc = radiusSwirl * cos(swirlAngle);
+    warpedY_rc = radiusSwirl * sin(swirlAngle);
+} else if (warpMode == 3) { // Scale XY
+    float scaleX = max(1.0e-9, 1.0 + effectiveWarpX);
+    float scaleY = max(1.0e-9, 1.0 + effectiveWarpY);
+    warpedX_rc = warpRelX * scaleX;
+    warpedY_rc = warpRelY * scaleY;
+} else if (warpMode == 4) { // Fisheye
+    float angleFish = atan(warpRelY, warpRelX);
+    float radiusFish = sqrt(warpRelX*warpRelX + warpRelY*warpRelY);
+    if (radiusFish > 1.0e-9) {
+        float power = 1.0 - effectiveWarp;
+        if (abs(power - 1.0) > 1.0e-9) {
+            float newRadius = pow(radiusFish, power);
+            warpedX_rc = newRadius * cos(angleFish);
+            warpedY_rc = newRadius * sin(angleFish);
+        }
+    }
+} else if (warpMode == 5) { // Shear
+    warpedX_rc = warpRelX + effectiveWarpX * warpRelY;
+    warpedY_rc = warpRelY + effectiveWarpY * warpRelX;
+}
+
+// --- 7. Translate back & calculate final target ---
+float finalX = warpedX_rc + warpCenterX;
+float finalY = warpedY_rc + warpCenterY;
+
+// --- OUTPUT ---
+_vx = finalX * amount;
+_vy = finalY * amount;
+// _color is not modified by this variation
+
+// --- End of ShapeWarp Variation Code ---
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
