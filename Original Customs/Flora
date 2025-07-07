@@ -1,0 +1,231 @@
+[PARAM_DEFS]
+name = leafType, value = 0, type = int, min = 0, max = 25
+name = filled, value = 1.0, type = float, min = 0.0, max = 1.0
+name = scale, value = 1.0, type = float, min = -5.0, max = 5.0
+name = distort, value = 0.1, type = float, min = -1.0, max = 1.0
+name = shapeMod, value = 0.5, type = float, min = 0.0, max = 1.0
+
+[VARIATION_CODE]
+// --- Start of Flora Variation Code ---
+
+float t = atan(_ty, _tx);
+float lx = 0.0;
+float ly = 0.0;
+
+// Barnsley Fern is a special case (Iterated Function System)
+if (leafType == 25) {
+    float rand_val = rand8(uv, rngState);
+    float totalProb = 0.99;
+    float p_frond = (0.85 - (shapeMod - 0.5) * 0.1) / totalProb;
+    float p_left  = (0.07 + (shapeMod - 0.5) * 0.05) / totalProb;
+    
+    if (rand_val < p_frond) {
+        lx = 0.85 * _tx + 0.04 * _ty;
+        ly = -0.04 * _tx + 0.85 * _ty + 1.6;
+    } else if (rand_val < p_frond + p_left) {
+        lx = 0.2 * _tx - 0.26 * _ty;
+        ly = 0.23 * _tx + 0.22 * _ty + 1.6;
+    } else {
+        lx = -0.15 * _tx + 0.28 * _ty;
+        ly = 0.26 * _tx + 0.24 * _ty + 0.44;
+    }
+    
+    _vx += lx * scale * amount;
+    _vy += ly * scale * amount;
+    return; // Skip the rest of the logic for this type
+}
+
+// All other leaf types are based on polar coordinates
+if (leafType == 0) { // Ginkgo Leaf
+    t += PI / 2.0;
+    float ginkgo_r = 0.0;
+    if(sin(t) > 0.0) {
+        ginkgo_r = 1.0;
+        ginkgo_r -= (shapeMod * 0.8) * pow(cos(t), 50.0);
+        ginkgo_r *= (1.0 + 0.05 * cos(8.0 * t));
+    }
+    lx = ginkgo_r * cos(t);
+    ly = ginkgo_r * sin(t);
+} else if (leafType == 1) { // Cannabis Leaf
+    t += PI / 2.0;
+    float cannabis_r = (1.0 + (0.5 + shapeMod * 0.8) * cos(8.0 * t)) * (1.0 + 0.1 * cos(24.0 * t)) * (0.9 + 0.05 * cos(200.0 * t)) * (1.0 + sin(t));
+    lx = cannabis_r * sin(t);
+    ly = -cannabis_r * cos(t);
+} else if (leafType == 2) { // Four-Leaf Clover
+    float effectiveCloverMod = -6.0 * shapeMod + 0.5;
+    float cleftTerm = 0.5 + effectiveCloverMod * 0.5;
+    t += PI / 4.0;
+    float clover_r = (1.0 + 0.8 * cos(4.0 * t)) * (1.0 - cleftTerm * pow(sin(4.0 * t), 2.0));
+    lx = clover_r * cos(t);
+    ly = clover_r * sin(t);
+} else if (leafType == 3) { // Rose Leaflet
+    t += PI / 2.0;
+    float rose_r = sin(t);
+    if (rose_r < 0.0) rose_r = 0.0;
+    rose_r *= (1.0 + (shapeMod * 0.1) * cos(40.0 * t));
+    lx = rose_r * cos(t) * 0.7;
+    ly = rose_r * sin(t);
+} else if (leafType == 4) { // Daisy Flower
+    t += PI / 2.0;
+    float daisy_r = 0.6 * (1.2 + cos((8.0 + shapeMod * 16.0) * t));
+    lx = daisy_r * cos(t);
+    ly = daisy_r * sin(t);
+} else if (leafType == 5) { // Butterfly Curve
+    t += PI / 2.0;
+    float butterfly_r = exp(cos(t)) - 2.0 * cos(4.0 * t) + pow(sin(t / 12.0), 5.0);
+    butterfly_r *= (0.7 + shapeMod * 0.6);
+    lx = butterfly_r * sin(t);
+    ly = -butterfly_r * cos(t);
+} else if (leafType == 6) { // Oak Leaf
+    t += PI / 2.0;
+    float oak_r = (1.0 + 0.8 * sin(t)) * (1.0 + (0.1 + shapeMod * 0.2) * cos(14.0 * t));
+    lx = oak_r * sin(t);
+    ly = -oak_r * cos(t);
+} else if (leafType == 7) { // Teardrop Leaf
+    t += PI / 2.0;
+    float teardrop_r = (1.0 - 0.9 * sin(t));
+    teardrop_r *= (1.0 + 0.02 * cos(60.0 * t));
+    lx = teardrop_r * cos(t) * (0.6 + shapeMod * 0.4);
+    ly = teardrop_r * sin(t);
+} else if (leafType == 8) { // Lotus Leaf
+    float lotus_r = 1.0 + 0.05 * cos(12.0 * t);
+    float center_offset = 0.1 + shapeMod * 0.4;
+    lx = lotus_r * cos(t);
+    ly = lotus_r * sin(t) + (center_offset * (1.0 - lotus_r));
+} else if (leafType == 9) { // Sycamore Leaf
+    t += PI / 2.0;
+    float sycamore_r = (1.0 - 0.5 * sin(t));
+    sycamore_r *= (1.0 + (0.1 + shapeMod * 0.4) * cos(5.0 * t));
+    sycamore_r *= (1.0 + 0.05 * cos(25.0 * t));
+    lx = sycamore_r * sin(t);
+    ly = -sycamore_r * cos(t);
+} else if (leafType == 10) { // Ash Leaflet
+    t += PI / 2.0;
+    float ash_r = (sin(t) > 0.0) ? sin(t) * (1.0 + (0.05 + shapeMod * 0.3) * cos(30.0 * t)) : 0.0;
+    lx = ash_r * cos(t) * 0.6;
+    ly = ash_r * sin(t);
+} else if (leafType == 11) { // Monstera Leaf
+    t += PI / 2.0;
+    float monstera_base_r = 1.0 - 0.9 * sin(t);
+    if (monstera_base_r < 0.0) monstera_base_r = 0.0;
+    float fenestrations = 1.0 - (shapeMod * 0.8) * pow(sin(t * 2.5), 10.0);
+    fenestrations *= 1.0 - (shapeMod * 0.7) * pow(cos(t * 3.5), 10.0);
+    float monstera_r = monstera_base_r * fenestrations;
+    lx = monstera_r * cos(t);
+    ly = monstera_r * sin(t);
+} else if (leafType == 12) { // Star Anise
+    t += PI / 2.0;
+    float anise_r = 1.0 + (0.2 + shapeMod * 0.4) * cos(8.0 * t);
+    lx = anise_r * cos(t);
+    ly = anise_r * sin(t);
+} else if (leafType == 13) { // Holly Leaf
+    t += PI / 2.0;
+    float holly_base_r = 1.0;
+    float num_points = 10.0;
+    float spike_depth = 0.15 + shapeMod * 0.2;
+    float spikes = 1.0 - spike_depth * abs(sin(t * num_points / 2.0));
+    float holly_r = holly_base_r * spikes;
+    lx = holly_r * cos(t) * 0.7;
+    ly = holly_r * sin(t);
+} else if (leafType == 14) { // Sweetgum Leaf
+    t += PI / 2.0;
+    float sweetgum_base_r = 1.0;
+    float sweetgum_num_points = 5.0;
+    float sweetgum_point_depth = 0.3 + shapeMod * 0.4;
+    float sweetgum_sharp_valleys = 1.0 - sweetgum_point_depth * abs(sin(t * sweetgum_num_points / 2.0));
+    float sweetgum_serrations = 1.0 + 0.04 * cos(40.0 * t);
+    float sweetgum_r = sweetgum_base_r * sweetgum_sharp_valleys * sweetgum_serrations;
+    lx = sweetgum_r * cos(t);
+    ly = sweetgum_r * sin(t);
+} else if (leafType == 15) { // Grape Leaf
+    t += PI / 2.0;
+    float lobe_depth = 0.1 + shapeMod * 0.2;
+    float base_shape = 1.0 + lobe_depth * cos(3.0 * t) - (lobe_depth * 0.5) * cos(5.0 * t);
+    float serrations = 1.0 + 0.03 * cos(20.0 * t) + 0.02 * cos(35.0 * t);
+    float grape_r = base_shape * serrations;
+    lx = grape_r * cos(t);
+    ly = grape_r * sin(t);
+} else if (leafType == 16) { // Castor Bean Leaf
+    t += PI / 2.0;
+    float castor_lobe_depth = 0.3 + shapeMod * 0.5;
+    float castor_base_shape = 1.0 + castor_lobe_depth * cos(7.0 * t);
+    float castor_serration_depth = 0.05;
+    float castor_serrations = 1.0 + castor_serration_depth * cos(42.0 * t);
+    float castor_r = castor_base_shape * castor_serrations;
+    lx = castor_r * cos(t);
+    ly = castor_r * sin(t);
+} else if (leafType == 17) { // Hosta Leaf
+    t += PI / 2.0;
+    float hosta_base_r = (1.0 - 0.9 * sin(t));
+    float waviness = 0.02 + shapeMod * 0.05;
+    float hosta_r = hosta_base_r * (1.0 + waviness * sin(10.0 * t));
+    lx = hosta_r * cos(t) * 1.2;
+    ly = hosta_r * sin(t);
+} else if (leafType == 18) { // Alocasia (Elephant Ear) Leaf
+    t = atan(_ty, _tx); // Use direct angle
+    float alocasia_base_r = 1.0 - sin(t);
+    float alocasia_lobe_definition = 1.0 - (0.1 + shapeMod * 0.4) * pow(cos(t), 2.0);
+    float alocasia_r = alocasia_base_r * alocasia_lobe_definition;
+    alocasia_r *= (1.0 + 0.03 * sin(15.0 * t));
+    lx = alocasia_r * cos(t) * 0.7;
+    ly = alocasia_r * sin(t);
+} else if (leafType == 19) { // Dandelion Flower
+    t += PI / 2.0;
+    float dandelion_r = 0.8 * (1.1 + cos((20.0 + shapeMod * 40.0) * t) * 0.3);
+    lx = dandelion_r * cos(t);
+    ly = dandelion_r * sin(t);
+} else if (leafType == 20) { // Columbine Flower
+    t += PI / 2.0;
+    float columbine_r = 1.0 + sin(t) + (0.2 + shapeMod * 0.6) * sin(5.0 * t - PI / 2.0);
+    lx = columbine_r * cos(t);
+    ly = columbine_r * sin(t);
+} else if (leafType == 21) { // Birch Leaf
+    t = atan(_ty, _tx); // Use direct angle
+    float birch_base_r = 1.0 - 0.9 * sin(t);
+    float primary_serrations = 1.0 + 0.05 * cos(20.0 * t);
+    float secondary_serrations = 1.0 + (0.02 + shapeMod * 0.03) * cos(40.0 * t);
+    float birch_r = birch_base_r * primary_serrations * secondary_serrations;
+    lx = birch_r * cos(t) * 0.8;
+    ly = birch_r * sin(t);
+} else if (leafType == 22) { // Tulip Flower
+    t += PI / 2.0;
+    float tulip_r = pow(abs(cos(t)), 0.3) + pow(abs(sin(t)), 2.0 + shapeMod * 2.0);
+    lx = tulip_r * sin(t);
+    ly = -tulip_r * cos(t) * 0.6;
+} else if (leafType == 23) { // Linden Leaf
+    t += PI / 2.0;
+    float linden_r = 1.0 - 0.9 * sin(t + (shapeMod - 0.5) * 0.2);
+    lx = linden_r * sin(t) * 1.1;
+    ly = -linden_r * cos(t);
+} else if (leafType == 24) { // Fiddlehead Fern
+    t = atan(_ty, _tx) * (2.0 + shapeMod * 4.0) * PI;
+    float fiddlehead_r = 0.05 * t;
+    lx = fiddlehead_r * cos(t);
+    ly = fiddlehead_r * sin(t);
+}
+
+// Apply distortion for a more organic look
+if (distort != 0.0) {
+    lx += distort * sin(_ty * 5.0);
+    ly += distort * cos(_tx * 5.0);
+}
+
+// Calculate filled radius
+float r = amount;
+if (filled > 0.0) {
+    if (filled > rand8(uv, rngState)) {
+        r = amount * rand8(uv, rngState);
+    }
+}
+
+// Apply final transformation for polar-based leaves
+_vx += r * lx * scale;
+_vy += r * ly * scale;
+
+// --- End of Flora Variation Code ---
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
