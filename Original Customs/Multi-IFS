@@ -1,0 +1,513 @@
+[PARAM_DEFS]
+name = ifs_type, value = 0, type = int, min = 0, max = 73
+name = coloring_mode, value = 0, type = int, min = 0, max = 1
+name = color_speed, value = 0.5, type = float, min = 0.0, max = 1.0
+name = color1, value = 0.0, type = float, min = 0.0, max = 1.0
+name = color2, value = 0.25, type = float, min = 0.0, max = 1.0
+name = color3, value = 0.5, type = float, min = 0.0, max = 1.0
+name = color4, value = 0.75, type = float, min = 0.0, max = 1.0
+
+[VARIATION_CODE]
+// --- Start of Multi-IFS Variation Code ---
+
+// Input point and constants
+float x = _tx;
+float y = _ty;
+const float S3D2 = 0.4330127018922193;
+
+// Output variables
+float nx = 0.0;
+float ny = 0.0;
+float newColor = 0.0;
+
+// Get a random number to select one of the transformations.
+float rand_val = rand8(uv, rngState);
+
+// Select the IFS type
+if (ifs_type == 1) { // Trapeze_4 IFS
+    if (rand_val < 0.25) {
+        nx = 0.5 * x;
+        ny = 0.5 * y;
+        newColor = color1;
+    } else if (rand_val < 0.5) {
+        nx = -0.25 * x - S3D2 * y + 0.25;
+        ny = S3D2 * x - 0.25 * y + S3D2;
+        newColor = color2;
+    } else if (rand_val < 0.75) {
+        nx = -0.25 * x + S3D2 * y - 0.5;
+        ny = -S3D2 * x - 0.25 * y;
+        newColor = color3;
+    } else {
+        nx = -0.5 * x - 0.25;
+        ny = -0.5 * y + S3D2;
+        newColor = color4;
+    }
+} else if (ifs_type == 2) { // Trapeze_3_5 IFS
+    if (rand_val < 0.25) {
+        nx = 0.5 * x;
+        ny = 0.5 * y;
+        newColor = color1;
+    } else if (rand_val < 0.5) {
+        nx = 0.5 * x - 0.5;
+        ny = 0.5 * y + 0.5;
+        newColor = color2;
+    } else if (rand_val < 0.75) {
+        nx = -0.5 * x + 0.5;
+        ny = 0.5 * y + 0.5;
+        newColor = color3;
+    } else {
+        nx = 0.5 * y + 0.5;
+        ny = -0.5 * x + 0.5;
+        newColor = color4;
+    }
+} else if (ifs_type == 3) { // Trapeze_2_6 IFS
+    if (rand_val < 0.25) {
+        nx = 0.5 * x;
+        ny = 0.5 * y;
+        newColor = color1;
+    } else if (rand_val < 0.5) {
+        nx = -0.5 * x + 0.5;
+        ny = 0.5 * y;
+        newColor = color2;
+    } else if (rand_val < 0.75) {
+        nx = -0.25 * x - S3D2 * y + 0.25;
+        ny = -S3D2 * x + 0.25 * y + S3D2;
+        newColor = color3;
+    } else {
+        nx = -0.25 * x + S3D2 * y + 0.25;
+        ny = -S3D2 * x - 0.25 * y + S3D2;
+        newColor = color4;
+    }
+} else if (ifs_type == 4) { // Spiral IFS
+    if (rand_val < 0.25) {
+        nx = 0.5 * x;
+        ny = 0.5 * y;
+        newColor = color1;
+    } else if (rand_val < 0.5) {
+        nx = 0.5 * x + 0.5;
+        ny = 0.5 * y;
+        newColor = color2;
+    } else if (rand_val < 0.75) {
+        nx = 0.5 * x;
+        ny = 0.5 * y + 0.5;
+        newColor = color3;
+    } else {
+        nx = 0.5 * y + 0.5;
+        ny = -0.5 * x + 1.0;
+        newColor = color4;
+    }
+} else if (ifs_type == 5) { // Sierpinski Hexagon
+    if (rand_val < 0.25) {
+        nx = (0.25 * x) + (-S3D2 * y) + 0.0;
+        ny = (S3D2 * x) + (0.25 * y) + 0.0;
+        newColor = color1;
+    } else if (rand_val < 0.5) {
+        nx = (-0.25 * x) + (S3D2 * y) - 0.5;
+        ny = (-S3D2 * x) + (-0.25 * y) + 0.0;
+        newColor = color2;
+    } else if (rand_val < 0.75) {
+        nx = (-0.25 * x) + (S3D2 * y) + 0.25;
+        ny = (-S3D2 * x) + (-0.25 * y) - S3D2;
+        newColor = color3;
+    } else {
+        nx = (-0.25 * x) + (S3D2 * y) + 0.25;
+        ny = (-S3D2 * x) + (-0.25 * y) + S3D2;
+        newColor = color4;
+    }
+} else if (ifs_type == 6) { // User Fractal
+    if (rand_val < 0.25) {
+        nx = -0.5 * x;
+        ny = 0.5 * y;
+        newColor = color1;
+    } else if (rand_val < 0.5) {
+        nx = (-0.25 * x) + (-S3D2 * y) + 0.25;
+        ny = (-S3D2 * x) + (0.25 * y) - S3D2;
+        newColor = color2;
+    } else if (rand_val < 0.75) {
+        nx = (-0.25 * x) + (-S3D2 * y) - 0.5;
+        ny = (S3D2 * x) + (-0.25 * y) - 0.8660254037844387;
+        newColor = color3;
+    } else {
+        nx = 0.5 * x + 1.0;
+        ny = 0.5 * y;
+        newColor = color4;
+    }
+} else if (ifs_type >= 7 && ifs_type <= 73) {
+    // This block covers all the "TESTING" cases from 7 to 73
+    // Each case is a set of 4 affine transformations
+    // Due to the extreme length, these are condensed. The logic is identical for each.
+    if (ifs_type == 7) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * y; ny = 0.5 * x - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y; ny = 0.5 * x - 0.5; newColor = color3; }
+        else { nx = 0.5 * x - 0.5; ny = 0.5 * y; newColor = color4; }
+    } else if (ifs_type == 8) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 0.25; ny = -0.5 * y + S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.25 * x - S3D2 * y + 0.25; ny = S3D2 * x + 0.25 * y + S3D2; newColor = color3; }
+        else { nx = 0.25 * x - S3D2 * y + 0.25; ny = S3D2 * x + 0.25 * y - S3D2; newColor = color4; }
+    } else if (ifs_type == 9) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x + S3D2 * y - 0.5; ny = -S3D2 * x - 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.25 * x + S3D2 * y - 0.25; ny = S3D2 * x + 0.25 * y + S3D2; newColor = color3; }
+        else { nx = -0.25 * x - S3D2 * y - 0.25; ny = -S3D2 * x - 0.25 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 10) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 1.0; ny = -0.5 * y - 1.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x; ny = -0.5 * y - 1.0; newColor = color3; }
+        else { nx = 0.5 * x - 1.0; ny = 0.5 * y - 1.5; newColor = color4; }
+    } else if (ifs_type == 11) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * x + 0.5; ny = 0.5 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.25 * x - S3D2 * y + 0.25; ny = -S3D2 * x + 0.25 * y + S3D2; newColor = color3; }
+        else { nx = -0.25 * x + S3D2 * y + 0.25; ny = -S3D2 * x - 0.25 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 12) {
+        if (rand_val < 0.25) { nx = 0.5 * y; ny = 0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * y; ny = 0.5 * x - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y; ny = -0.5 * x - 0.5; newColor = color3; }
+        else { nx = -0.5 * y - 1.0; ny = -0.5 * x - 1.0; newColor = color4; }
+    } else if (ifs_type == 13) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x - S3D2 * y + 0.5; ny = -S3D2 * x + 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * x + 0.5; ny = -0.5 * y; newColor = color3; }
+        else { nx = -0.25 * x + S3D2 * y + 0.5; ny = S3D2 * x + 0.25 * y; newColor = color4; }
+    } else if (ifs_type == 14) {
+        if (rand_val < 0.25) { nx = -0.5 * y; ny = -0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * y; ny = 0.5 * x + 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * y - 0.5; ny = -0.5 * x; newColor = color3; }
+        else { nx = 0.5 * y - 0.5; ny = 0.5 * x + 0.5; newColor = color4; }
+    } else if (ifs_type == 15) {
+        if (rand_val < 0.25) { nx = -0.5 * y; ny = -0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 1.0; ny = 0.5 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y - 1.5; ny = 0.5 * x + 0.5; newColor = color3; }
+        else { nx = -0.5 * y - 0.5; ny = -0.5 * x + 0.5; newColor = color4; }
+    } else if (ifs_type == 16) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * y + 0.5; ny = -0.5 * x - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y + 2.0; ny = -0.5 * x - 0.5; newColor = color3; }
+        else { nx = 0.5 * x + 1.0; ny = -0.5 * y - 1.5; newColor = color4; }
+    } else if (ifs_type == 17) {
+        if (rand_val < 0.25) { nx = -0.25 * x - S3D2 * y; ny = -S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x - S3D2 * y + 0.5; ny = -S3D2 * x + 0.25 * y - 0.8660254; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.25 * x + S3D2 * y + 0.25; ny = S3D2 * x - 0.25 * y - 1.2990381; newColor = color3; }
+        else { nx = -0.25 * x - S3D2 * y + 1.25; ny = -S3D2 * x + 0.25 * y + 0.4330127; newColor = color4; }
+    } else if (ifs_type == 18) {
+        if (rand_val < 0.25) { nx = -0.5 * y; ny = -0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x; ny = -0.5 * y - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x + 0.5; ny = 0.5 * y - 0.5; newColor = color3; }
+        else { nx = -0.5 * y; ny = -0.5 * x - 0.5; newColor = color4; }
+    } else if (ifs_type == 19) {
+        if (rand_val < 0.25) { nx = 0.5 * y; ny = 0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * x + 0.5; ny = 0.5 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y + 0.5; ny = 0.5 * x; newColor = color3; }
+        else { nx = -0.5 * y + 0.5; ny = -0.5 * x + 0.5; newColor = color4; }
+    } else if (ifs_type == 20) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * y + 0.5; ny = 0.5 * x; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * y + 0.5; ny = -0.5 * x + 0.5; newColor = color3; }
+        else { nx = -0.5 * x + 0.5; ny = -0.5 * y; newColor = color4; }
+    } else if (ifs_type == 21) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * x - 0.5; ny = -0.5 * y + 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y - 0.5; ny = 0.5 * x + 1.0; newColor = color3; }
+        else { nx = -0.5 * x - 0.5; ny = -0.5 * y + 1.0; newColor = color4; }
+    } else if (ifs_type == 22) {
+        if (rand_val < 0.25) { nx = 0.5 * y; ny = 0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 0.5; ny = -0.5 * y - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * x - 0.5; ny = -0.5 * y - 1.0; newColor = color3; }
+        else { nx = 0.5 * y - 1.5; ny = 0.5 * x; newColor = color4; }
+    } else if (ifs_type == 23) {
+        if (rand_val < 0.25) { nx = 0.5 * y; ny = 0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * x - 0.5; ny = -0.5 * y - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * x; ny = -0.5 * y - 1.0; newColor = color3; }
+        else { nx = -0.5 * y - 0.5; ny = 0.5 * x - 0.5; newColor = color4; }
+    } else if (ifs_type == 24) {
+        if (rand_val < 0.25) { nx = 0.25 * x + S3D2 * y; ny = S3D2 * x - 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.25 * x + S3D2 * y + 0.5; ny = S3D2 * x - 0.25 * y - 0.8660254; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.25 * x - S3D2 * y + 1.5; ny = -S3D2 * x + 0.25 * y; newColor = color3; }
+        else { nx = 0.25 * x + S3D2 * y + 1.5; ny = S3D2 * x - 0.25 * y; newColor = color4; }
+    } else if (ifs_type == 25) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.25 * x + S3D2 * y - 0.25; ny = -S3D2 * x + 0.25 * y + S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x + 0.5; ny = 0.5 * y; newColor = color3; }
+        else { nx = -0.25 * x + S3D2 * y + 0.25; ny = -S3D2 * x - 0.25 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 26) {
+        if (rand_val < 0.25) { nx = 0.25 * x - S3D2 * y; ny = S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x - S3D2 * y + 0.25; ny = S3D2 * x - 0.25 * y - S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * x + 0.25; ny = -0.5 * y - S3D2; newColor = color3; }
+        else { nx = 0.5 * x + 0.25; ny = 0.5 * y - S3D2; newColor = color4; }
+    } else if (ifs_type == 27) {
+        if (rand_val < 0.25) { nx = 0.25 * x + S3D2 * y; ny = -S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.25 * x - S3D2 * y + 0.5; ny = S3D2 * x + 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x - 0.5; ny = -0.5 * y; newColor = color3; }
+        else { nx = -0.5 * x + 0.25; ny = -0.5 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 28) {
+        if (rand_val < 0.25) { nx = 0.25 * x + S3D2 * y; ny = -S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x + 0.25; ny = -0.5 * y + S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.25 * x + S3D2 * y + 0.25; ny = S3D2 * x + 0.25 * y - S3D2; newColor = color3; }
+        else { nx = -0.5 * x - 0.75; ny = -0.5 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 29) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * y + 0.5; ny = -0.5 * x + 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x + 1.5; ny = -0.5 * y; newColor = color3; }
+        else { nx = 0.5 * x; ny = 0.5 * y - 0.5; newColor = color4; }
+    } else if (ifs_type == 30) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 0.25; ny = 0.5 * y + 1.2990381; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.25 * x + S3D2 * y - 0.75; ny = S3D2 * x - 0.25 * y - S3D2; newColor = color3; }
+        else { nx = 0.25 * x + S3D2 * y - 0.25; ny = S3D2 * x - 0.25 * y + 1.2990381; newColor = color4; }
+    } else if (ifs_type == 31) {
+        if (rand_val < 0.25) { nx = -0.5 * y; ny = 0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * y - 0.5; ny = -0.5 * x + 2.0; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y - 1.0; ny = -0.5 * x + 1.0; newColor = color3; }
+        else { nx = 0.5 * y - 1.5; ny = -0.5 * x; newColor = color4; }
+    } else if (ifs_type == 32) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * y + 0.5; ny = 0.5 * x - 1.0; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x + 1.5; ny = -0.5 * y; newColor = color3; }
+        else { nx = -0.5 * y + 0.5; ny = -0.5 * x - 0.5; newColor = color4; }
+    } else if (ifs_type == 33) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x + S3D2 * y + 0.5; ny = S3D2 * x + 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x + 0.5; ny = -0.5 * y; newColor = color3; }
+        else { nx = -0.25 * x - S3D2 * y + 0.5; ny = S3D2 * x - 0.25 * y; newColor = color4; }
+    } else if (ifs_type == 34) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 1.5; ny = -0.5 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x - 1.5; ny = 0.5 * y - 0.5; newColor = color3; }
+        else { nx = 0.5 * x; ny = -0.5 * y + 1.5; newColor = color4; }
+    } else if (ifs_type == 35) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 1.0; ny = -0.5 * y - 1.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x; ny = -0.5 * y - 1.0; newColor = color3; }
+        else { nx = 0.5 * x - 1.0; ny = 0.5 * y - 1.5; newColor = color4; }
+    } else if (ifs_type == 36) {
+        if (rand_val < 0.25) { nx = 0.25 * x - S3D2 * y; ny = S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * x + 0.5; ny = -0.5 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x + 1.25; ny = -0.5 * y - 1.2990381; newColor = color3; }
+        else { nx = 0.25 * x + S3D2 * y + 0.25; ny = -S3D2 * x + 0.25 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 37) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.25 * x + S3D2 * y - 0.25; ny = -S3D2 * x + 0.25 * y + S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x + 0.5; ny = 0.5 * y; newColor = color3; }
+        else { nx = -0.25 * x + S3D2 * y + 0.25; ny = -S3D2 * x - 0.25 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 38) {
+        if (rand_val < 0.25) { nx = -0.25 * x + S3D2 * y; ny = S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.25 * x - S3D2 * y + 0.5; ny = S3D2 * x + 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x - 0.5; ny = -0.5 * y; newColor = color3; }
+        else { nx = -0.5 * x + 0.25; ny = -0.5 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 39) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * y - 0.5; ny = 0.5 * x - 1.0; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y + 0.5; ny = -0.5 * x + 0.5; newColor = color3; }
+        else { nx = -0.5 * x + 1.5; ny = -0.5 * y; newColor = color4; }
+    } else if (ifs_type == 40) {
+        if (rand_val < 0.25) { nx = -0.5 * y; ny = -0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 1.0; ny = 0.5 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y - 1.5; ny = 0.5 * x + 0.5; newColor = color3; }
+        else { nx = -0.5 * y - 0.5; ny = -0.5 * x + 0.5; newColor = color4; }
+    } else if (ifs_type == 41) {
+        if (rand_val < 0.25) { nx = -0.5 * y; ny = -0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * y; ny = 0.5 * x + 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * y - 0.5; ny = -0.5 * x; newColor = color3; }
+        else { nx = 0.5 * y - 0.5; ny = 0.5 * x + 0.5; newColor = color4; }
+    } else if (ifs_type == 42) {
+        if (rand_val < 0.25) { nx = 0.25 * x + S3D2 * y; ny = -S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x + 0.25; ny = -0.5 * y + S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.25 * x + S3D2 * y + 0.25; ny = S3D2 * x + 0.25 * y - S3D2; newColor = color3; }
+        else { nx = -0.5 * x - 0.75; ny = -0.5 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 43) {
+        if (rand_val < 0.25) { nx = 0.25 * x + S3D2 * y; ny = -S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.25 * x - S3D2 * y + 0.5; ny = S3D2 * x + 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x - 0.5; ny = -0.5 * y; newColor = color3; }
+        else { nx = -0.5 * x + 0.25; ny = -0.5 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 44) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x - S3D2 * y + 0.25; ny = -S3D2 * x + 0.25 * y - S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.25 * x + S3D2 * y + 0.25; ny = -S3D2 * x - 0.25 * y - S3D2; newColor = color3; }
+        else { nx = 0.5 * x - 0.5; ny = 0.5 * y; newColor = color4; }
+    } else if (ifs_type == 45) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * y + 0.5; ny = -0.5 * x - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x - 0.5; ny = 0.5 * y - 0.5; newColor = color3; }
+        else { nx = -0.5 * x; ny = -0.5 * y - 1.0; newColor = color4; }
+    } else if (ifs_type == 46) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 1.5; ny = 0.5 * y - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * x; ny = 0.5 * y - 2.0; newColor = color3; }
+        else { nx = 0.5 * x + 0.5; ny = 0.5 * y - 0.5; newColor = color4; }
+    } else if (ifs_type == 47) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * x - 1.0; ny = 0.5 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y - 0.5; ny = -0.5 * x - 0.5; newColor = color3; }
+        else { nx = -0.5 * x - 0.5; ny = -0.5 * y - 0.5; newColor = color4; }
+    } else if (ifs_type == 48) {
+        if (rand_val < 0.25) { nx = -0.25 * x + S3D2 * y; ny = S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x + S3D2 * y - 0.75; ny = S3D2 * x + 0.25 * y + S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * x - 0.5; ny = -0.5 * y; newColor = color3; }
+        else { nx = 0.25 * x - S3D2 * y - 0.5; ny = S3D2 * x + 0.25 * y; newColor = color4; }
+    } else if (ifs_type == 49) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * x - 0.5; ny = -0.5 * y + 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y - 0.5; ny = 0.5 * x + 1.0; newColor = color3; }
+        else { nx = -0.5 * x - 0.5; ny = -0.5 * y + 1.0; newColor = color4; }
+    } else if (ifs_type == 50) {
+        if (rand_val < 0.25) { nx = -0.25 * x + S3D2 * y; ny = S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x - S3D2 * y - 0.25; ny = -S3D2 * x + 0.25 * y + S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.25 * x + S3D2 * y - 0.25; ny = -S3D2 * x + 0.25 * y + S3D2; newColor = color3; }
+        else { nx = -0.25 * x - S3D2 * y + 0.5; ny = -S3D2 * x + 0.25 * y; newColor = color4; }
+    } else if (ifs_type == 51) {
+        if (rand_val < 0.25) { nx = 0.25 * x + S3D2 * y; ny = S3D2 * x - 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 0.25; ny = -0.5 * y - S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.25 * x + S3D2 * y - 0.25; ny = S3D2 * x - 0.25 * y - S3D2; newColor = color3; }
+        else { nx = 0.25 * x - S3D2 * y - 0.25; ny = -S3D2 * x - 0.25 * y - S3D2; newColor = color4; }
+    } else if (ifs_type == 52) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x + S3D2 * y - 0.25; ny = S3D2 * x + 0.25 * y - S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * x; ny = -0.5 * y - 0.8660254; newColor = color3; }
+        else { nx = -0.25 * x - S3D2 * y + 0.25; ny = -S3D2 * x + 0.25 * y - S3D2; newColor = color4; }
+    } else if (ifs_type == 53) {
+        if (rand_val < 0.25) { nx = -0.25 * x + S3D2 * y; ny = S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x + S3D2 * y - 0.75; ny = S3D2 * x + 0.25 * y + S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * x - 0.5; ny = -0.5 * y; newColor = color3; }
+        else { nx = 0.25 * x - S3D2 * y - 0.5; ny = S3D2 * x + 0.25 * y; newColor = color4; }
+    } else if (ifs_type == 54) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x - S3D2 * y + 0.5; ny = -S3D2 * x + 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * x + 0.5; ny = -0.5 * y; newColor = color3; }
+        else { nx = -0.25 * x + S3D2 * y + 0.5; ny = S3D2 * x + 0.25 * y; newColor = color4; }
+    } else if (ifs_type == 55) {
+        if (rand_val < 0.25) { nx = -0.25 * x - S3D2 * y; ny = -S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x + S3D2 * y - 0.5; ny = S3D2 * x + 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.25 * x + S3D2 * y + 0.25; ny = S3D2 * x + 0.25 * y + S3D2; newColor = color3; }
+        else { nx = -0.25 * x - S3D2 * y + 0.25; ny = -S3D2 * x + 0.25 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 56) {
+        if (rand_val < 0.25) { nx = -0.25 * x + S3D2 * y; ny = -S3D2 * x - 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.25 * x + S3D2 * y + 0.75; ny = -S3D2 * x + 0.25 * y + S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.25 * x + S3D2 * y - 0.25; ny = -S3D2 * x + 0.25 * y - S3D2; newColor = color3; }
+        else { nx = -0.25 * x - S3D2 * y + 0.5; ny = S3D2 * x - 0.25 * y; newColor = color4; }
+    } else if (ifs_type == 57) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x + S3D2 * y - 0.5; ny = S3D2 * x + 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.25 * x - S3D2 * y - 0.25; ny = -S3D2 * x + 0.25 * y - S3D2; newColor = color3; }
+        else { nx = -0.25 * x - S3D2 * y - 0.5; ny = S3D2 * x - 0.25 * y; newColor = color4; }
+    } else if (ifs_type == 58) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * y + 0.5; ny = -0.5 * x - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x - 0.5; ny = 0.5 * y - 0.5; newColor = color3; }
+        else { nx = -0.5 * x; ny = -0.5 * y - 1.0; newColor = color4; }
+    } else if (ifs_type == 59) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 1.5; ny = 0.5 * y - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * x; ny = 0.5 * y - 2.0; newColor = color3; }
+        else { nx = 0.5 * x + 0.5; ny = 0.5 * y - 0.5; newColor = color4; }
+    } else if (ifs_type == 60) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * x - 1.0; ny = 0.5 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y - 0.5; ny = -0.5 * x - 0.5; newColor = color3; }
+        else { nx = -0.5 * x - 0.5; ny = -0.5 * y - 0.5; newColor = color4; }
+    } else if (ifs_type == 61) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x - S3D2 * y - 0.5; ny = S3D2 * x - 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x - 0.25; ny = 0.5 * y - S3D2; newColor = color3; }
+        else { nx = -0.25 * x + S3D2 * y - 0.25; ny = -S3D2 * x - 0.25 * y - S3D2; newColor = color4; }
+    } else if (ifs_type == 62) {
+        if (rand_val < 0.25) { nx = 0.5 * y; ny = 0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * y - 1.0; ny = -0.5 * x - 1.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y; ny = -0.5 * x - 0.5; newColor = color3; }
+        else { nx = 0.5 * y; ny = -0.5 * x - 1.0; newColor = color4; }
+    } else if (ifs_type == 63) {
+        if (rand_val < 0.25) { nx = 0.5 * y; ny = 0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * y; ny = 0.5 * x - 1.0; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y; ny = -0.5 * x - 0.5; newColor = color3; }
+        else { nx = -0.5 * y - 1.0; ny = 0.5 * x - 0.5; newColor = color4; }
+    } else if (ifs_type == 64) {
+        if (rand_val < 0.25) { nx = -0.5 * y; ny = -0.5 * x; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * y + 1.5; ny = -0.5 * x; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y + 0.5; ny = -0.5 * x; newColor = color3; }
+        else { nx = 0.5 * y + 1.0; ny = 0.5 * x - 1.0; newColor = color4; }
+    } else if (ifs_type == 65) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x + S3D2 * y - 0.5; ny = -S3D2 * x - 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.25 * x + S3D2 * y - 0.25; ny = S3D2 * x + 0.25 * y + S3D2; newColor = color3; }
+        else { nx = -0.25 * x - S3D2 * y - 0.25; ny = -S3D2 * x - 0.25 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 66) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x + 0.25; ny = -0.5 * y + S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.25 * x - S3D2 * y + 0.25; ny = S3D2 * x + 0.25 * y + S3D2; newColor = color3; }
+        else { nx = 0.25 * x - S3D2 * y + 0.25; ny = S3D2 * x + 0.25 * y - S3D2; newColor = color4; }
+    } else if (ifs_type == 67) {
+        if (rand_val < 0.25) { nx = 0.25 * x - S3D2 * y; ny = S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x + S3D2 * y + 0.5; ny = -S3D2 * x - 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x + 0.5; ny = 0.5 * y; newColor = color3; }
+        else { nx = -0.25 * x - S3D2 * y + 0.5; ny = -S3D2 * x + 0.25 * y; newColor = color4; }
+    } else if (ifs_type == 68) {
+        if (rand_val < 0.25) { nx = 0.25 * x + S3D2 * y; ny = -S3D2 * x + 0.25 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x - S3D2 * y + 0.25; ny = S3D2 * x - 0.25 * y + S3D2; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.25 * x - S3D2 * y + 0.25; ny = -S3D2 * x + 0.25 * y + S3D2; newColor = color3; }
+        else { nx = -0.5 * x + 0.25; ny = -0.5 * y + S3D2; newColor = color4; }
+    } else if (ifs_type == 69) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = -0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x + S3D2 * y - 0.5; ny = S3D2 * x + 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.25 * x - S3D2 * y - 0.25; ny = -S3D2 * x + 0.25 * y - S3D2; newColor = color3; }
+        else { nx = -0.25 * x - S3D2 * y - 0.5; ny = S3D2 * x - 0.25 * y; newColor = color4; }
+    } else if (ifs_type == 70) {
+        if (rand_val < 0.25) { nx = -0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * y + 0.5; ny = -0.5 * x - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x - 0.5; ny = 0.5 * y - 0.5; newColor = color3; }
+        else { nx = -0.5 * x; ny = -0.5 * y - 1.0; newColor = color4; }
+    } else if (ifs_type == 71) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = 0.5 * x - 1.5; ny = 0.5 * y - 0.5; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * x; ny = 0.5 * y - 2.0; newColor = color3; }
+        else { nx = 0.5 * x + 0.5; ny = 0.5 * y - 0.5; newColor = color4; }
+    } else if (ifs_type == 72) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.5 * x - 1.0; ny = 0.5 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = 0.5 * y - 0.5; ny = -0.5 * x - 0.5; newColor = color3; }
+        else { nx = -0.5 * x - 0.5; ny = -0.5 * y - 0.5; newColor = color4; }
+    } else if (ifs_type == 73) {
+        if (rand_val < 0.25) { nx = 0.5 * x; ny = 0.5 * y; newColor = color1; }
+        else if (rand_val < 0.5) { nx = -0.25 * x - S3D2 * y - 0.5; ny = S3D2 * x - 0.25 * y; newColor = color2; }
+        else if (rand_val < 0.75) { nx = -0.5 * x - 0.25; ny = 0.5 * y - S3D2; newColor = color3; }
+        else { nx = -0.25 * x + S3D2 * y - 0.25; ny = -S3D2 * x - 0.25 * y - S3D2; newColor = color4; }
+    }
+} else { // Vicsek IFS (default, ifs_type == 0)
+    if (rand_val < 0.25) {
+        nx = 0.5 * x;
+        ny = 0.5 * y;
+        newColor = color1;
+    } else if (rand_val < 0.5) {
+        nx = 0.5 * x - 0.5;
+        ny = 0.5 * y - 0.5;
+        newColor = color2;
+    } else if (rand_val < 0.75) {
+        nx = 0.5 * x - 0.5;
+        ny = 0.5 * y;
+        newColor = color3;
+    } else {
+        nx = 0.5 * x;
+        ny = 0.5 * y - 0.5;
+        newColor = color4;
+    }
+}
+
+// Apply the chosen coloring mode
+if (coloring_mode == 1) { // Iterative Blend
+    float oldColor = _color;
+    _color = oldColor + (newColor - oldColor) * color_speed;
+} else { // Simple (default)
+    _color = newColor;
+}
+
+// Apply the result to the variation's output
+_vx += nx * amount;
+_vy += ny * amount;
+
+// --- End of Multi-IFS Variation Code ---
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
