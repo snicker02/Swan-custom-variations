@@ -1,0 +1,204 @@
+[PARAM_DEFS]
+name = mode, value = 0, type = int, min = 0, max = 9
+name = scale, value = 2.0, type = float, min = -10.0, max = 10.0
+name = distortX, value = 1.5, type = float, min = -5.0, max = 5.0
+name = distortY, value = 1.5, type = float, min = -5.0, max = 5.0
+name = symmetry, value = 0, type = int, min = 0, max = 5
+name = fold_n, value = 6, type = int, min = 1, max = 20
+name = edge_blend, value = 0.0, type = float, min = 0.0, max = 0.5
+name = grid_rotate, value = 0.0, type = float, min = -180.0, max = 180.0
+name = cell_rotate, value = 0.0, type = float, min = -180.0, max = 180.0
+name = cell_rotate2, value = 0.0, type = float, min = -180.0, max = 180.0
+name = rotate_pattern, value = 0, type = int, min = 0, max = 3
+name = num_sectors, value = 8, type = int, min = 1, max = 32
+name = julia_iterations, value = 4, type = int, min = 1, max = 20
+
+[VARIATION_CODE]
+// --- Start of TessellatedT Variation Code ---
+
+// --- Input and Setup ---
+float x = _tx;
+float y = _ty;
+float dx = 0.0, dy = 0.0;
+float base_fx = 0.0, base_fy = 0.0;
+int ix_for_pattern = 0, iy_for_pattern = 0;
+bool allow_edge_blend = false;
+
+// --- Apply Grid Rotation ---
+if (grid_rotate != 0.0) {
+    float grid_angle_rad = grid_rotate * PI / 180.0;
+    float cos_g = cos(grid_angle_rad);
+    float sin_g = sin(grid_angle_rad);
+    float x0 = x;
+    float y0 = y;
+    x = x0 * cos_g - y0 * sin_g;
+    y = x0 * sin_g + y0 * cos_g;
+}
+
+// --- Calculate Base Coordinates & Cell Indices based on Mode ---
+if (mode == 0 || mode == 1 || mode == 3 || mode == 6 || mode == 7 || mode == 8 || mode == 9) { // Square Grid Modes
+    allow_edge_blend = true;
+    float scaledX_sq = x * scale;
+    float scaledY_sq = y * scale;
+    ix_for_pattern = int(floor(scaledX_sq));
+    iy_for_pattern = int(floor(scaledY_sq));
+    base_fx = scaledX_sq - float(ix_for_pattern) - 0.5;
+    base_fy = scaledY_sq - float(iy_for_pattern) - 0.5;
+} else if (mode == 2) { // Hex Offset Grid
+    allow_edge_blend = true;
+    float scaledX2 = x * scale;
+    float scaledY2 = y * scale;
+    int iy_hex_offset = int(floor(scaledY2));
+    float offset_hex = (mod(float(iy_hex_offset), 2.0) != 0.0) ? 0.5 : 0.0;
+    float scaledX_hex_offset = scaledX2 + offset_hex;
+    ix_for_pattern = int(floor(scaledX_hex_offset));
+    iy_for_pattern = iy_hex_offset;
+    base_fx = scaledX_hex_offset - float(ix_for_pattern) - 0.5;
+    base_fy = scaledY2 - float(iy_hex_offset) - 0.5;
+} else if (mode == 4) { // True Hexagonal Grid
+    allow_edge_blend = false;
+    float hex_size = (scale == 0.0) ? 1.0 : 1.0 / abs(scale);
+    float q = (0.57735 * x - 0.33333 * y) / hex_size;
+    float r_axial = (0.66667 * y) / hex_size;
+    float rx = round(q);
+    float ry = round(-q - r_axial);
+    float rz = round(r_axial);
+    float x_diff = abs(rx - q);
+    float y_diff = abs(ry - (-q - r_axial));
+    float z_diff = abs(rz - r_axial);
+    if (x_diff > y_diff && x_diff > z_diff) { rx = -ry - rz; }
+    else if (y_diff > z_diff) { ry = -rx - rz; }
+    else { rz = -rx - ry; }
+    ix_for_pattern = int(rx);
+    iy_for_pattern = int(rz);
+    float frac_q = q - rx;
+    float frac_r = r_axial - rz;
+    base_fx = hex_size * (1.73205 * frac_q + 0.866025 * frac_r);
+    base_fy = hex_size * (1.5 * frac_r);
+} else if (mode == 5) { // Radial Tiling
+    allow_edge_blend = false;
+    int sectors = max(1, num_sectors);
+    float r_polar = sqrt(x*x + y*y);
+    float a_polar = atan(y, x);
+    float scaled_r = scale * r_polar;
+    ix_for_pattern = int(floor(scaled_r));
+    float norm_a = (a_polar + PI) / (2.0 * PI);
+    iy_for_pattern = int(floor(norm_a * float(sectors)));
+    base_fx = (scaled_r - float(ix_for_pattern)) - 0.5;
+    base_fy = (norm_a * float(sectors) - float(iy_for_pattern)) - 0.5;
+}
+
+// --- Apply Base Symmetry Transformation ---
+float sym_fx = base_fx;
+float sym_fy = base_fy;
+if (symmetry == 1) { // X-Reflect
+    sym_fy = abs(base_fy);
+} else if (symmetry == 2) { // Y-Reflect
+    sym_fx = abs(base_fx);
+} else if (symmetry == 3) { // Quadrant
+    sym_fx = abs(base_fx);
+    sym_fy = abs(base_fy);
+} else if (symmetry == 4) { // D4
+    float ax4 = abs(base_fx);
+    float ay4 = abs(base_fy);
+    sym_fx = min(ax4, ay4);
+    sym_fy = max(ax4, ay4);
+} else if (symmetry == 5) { // Dn
+    int N = max(1, fold_n);
+    if (N > 1) {
+        float r_sym = sqrt(base_fx * base_fx + base_fy * base_fy);
+        if (r_sym > 1.0e-9) {
+            float a_sym = atan(base_fy, base_fx);
+            if (a_sym < 0.0) a_sym += 2.0 * PI;
+            float wedge_angle = PI / float(N);
+            float a_mod = mod(a_sym, 2.0 * wedge_angle);
+            float a_folded = (a_mod > wedge_angle) ? (2.0 * wedge_angle - a_mod) : a_mod;
+            sym_fx = r_sym * cos(a_folded);
+            sym_fy = r_sym * sin(a_folded);
+        }
+    }
+}
+
+// --- Apply Distortion ---
+if (mode == 0 || mode == 2 || mode == 4) { // Power Distort
+    dx = sign(base_fx) * pow(abs(sym_fx), distortX);
+    dy = sign(base_fy) * pow(abs(sym_fy), distortY);
+} else if (mode == 1) { // Sine Distort
+    dx = sym_fx + (distortX - 1.0) * sin(sym_fy * 2.0 * PI) * 0.1;
+    dy = sym_fy + (distortY - 1.0) * sin(sym_fx * 2.0 * PI) * 0.1;
+} else if (mode == 3 || mode == 5) { // Radial Distort
+    float r_rad = sqrt(sym_fx * sym_fx + sym_fy * sym_fy);
+    float a_rad = atan(sym_fy, sym_fx);
+    float r_distorted = pow(r_rad, distortX);
+    float a_distorted = a_rad + (distortY - 1.0) * r_rad * 2.0;
+    dx = r_distorted * cos(a_distorted);
+    dy = r_distorted * sin(a_distorted);
+} else if (mode == 6) { // Exp/Log Radial
+    float r6 = sqrt(sym_fx * sym_fx + sym_fy * sym_fy);
+    float a6 = atan(sym_fy, sym_fx);
+    float r_new6 = r6 * exp(distortX * (r6 - distortY));
+    dx = r_new6 * cos(a6);
+    dy = r_new6 * sin(a6);
+} else if (mode == 7) { // Tangent Trig
+    dx = sym_fx + distortX * tan(sym_fy * PI * 0.5 * 0.999);
+    dy = sym_fy + distortY * tan(sym_fx * PI * 0.5 * 0.999);
+} else if (mode == 8) { // Polynomial
+    float scale_factor8 = 1.0 + distortX * sym_fx + distortY * sym_fy;
+    dx = sym_fx * scale_factor8;
+    dy = sym_fy * scale_factor8;
+} else if (mode == 9) { // Julia-like
+    float zx = sym_fx;
+    float zy = sym_fy;
+    float cx = distortX;
+    float cy = distortY;
+    for (int i = 0; i < julia_iterations; i++) {
+        float zx_new = zx * zx - zy * zy + cx;
+        float zy_new = 2.0 * zx * zy + cy;
+        zx = zx_new;
+        zy = zy_new;
+    }
+    dx = zx;
+    dy = zy;
+}
+
+// --- Apply Edge Blending ---
+float blended_dx = dx;
+float blended_dy = dy;
+if (allow_edge_blend && edge_blend > 0.0) {
+    float clamped_edge_blend = min(edge_blend, 0.5);
+    float dist_from_center = max(abs(base_fx), abs(base_fy));
+    float blend_factor = 1.0 - smoothstep(0.5 - clamped_edge_blend, 0.5, dist_from_center);
+    blended_dx = mix(base_fx, dx, blend_factor);
+    blended_dy = mix(base_fy, dy, blend_factor);
+}
+
+// --- Apply Cell Rotation ---
+float current_cell_rotate = cell_rotate;
+if (rotate_pattern > 0) {
+    bool ix_is_even = (mod(float(ix_for_pattern), 2.0) == 0.0);
+    bool iy_is_even = (mod(float(iy_for_pattern), 2.0) == 0.0);
+    if (rotate_pattern == 1 && (ix_is_even != iy_is_even)) { current_cell_rotate = cell_rotate2; }
+    if (rotate_pattern == 2 && !iy_is_even) { current_cell_rotate = cell_rotate2; }
+    if (rotate_pattern == 3 && !ix_is_even) { current_cell_rotate = cell_rotate2; }
+}
+float final_dx = blended_dx;
+float final_dy = blended_dy;
+if (current_cell_rotate != 0.0) {
+    float cell_angle_rad = current_cell_rotate * PI / 180.0;
+    float cos_c = cos(cell_angle_rad);
+    float sin_c = sin(cell_angle_rad);
+    final_dx = blended_dx * cos_c - blended_dy * sin_c;
+    final_dy = blended_dx * sin_c + blended_dy * cos_c;
+}
+
+// --- Final Output ---
+_vx += final_dx * amount;
+_vy += final_dy * amount;
+
+// --- End of TessellatedT Variation Code ---
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
