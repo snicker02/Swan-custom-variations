@@ -1,0 +1,131 @@
+[PARAM_DEFS]
+name = Sc, value = 1.0, type = float, min = 0.01, max = 10.0
+name = Dens, value = 0.5, type = float, min = 0.0, max = 1.0
+name = X, value = 10.0, type = float, min = 0.1, max = 20.0
+name = Y, value = 10.0, type = float, min = 0.1, max = 20.0
+name = Seed, value = 0, type = int, min = 0, max = 10000
+name = Hollow, value = 0.0, type = int, min = 0, max = 1
+name = BorderThick, value = 0.1, type = float, min = 0.0, max = 1.0
+name = AtanMode, value = 0.0, type = int, min = 0, max = 1
+name = AtanFactor, value = 0.0, type = float, min = -2.0, max = 2.0
+name = AtanFrequency, value = 4.0, type = float, min = 0.0, max = 20.0
+name = SubdivActive, value = 0.0, type = int, min = 0, max = 1
+name = SubdivChance, value = 0.5, type = float, min = 0.0, max = 1.0
+name = SubdivScale, value = 0.4, type = float, min = 0.01, max = 1.0
+name = SubdivPlace, value = 0.5, type = float, min = 0.0, max = 1.0
+
+[VARIATION_CODE]
+// --- Start of SquareRand Variation Code ---
+
+// --- Main Loop to Find a Valid Point ---
+float currentX = 0.0, currentY = 0.0;
+int gridM = 0, gridN = 0;
+bool pointFound = false;
+float finalX = 0.0, finalY = 0.0;
+float fseed = float(Seed);
+
+for (int iter = 0; iter < 100; iter = iter + 1) {
+    currentX = X * (1.0 - 2.0 * rand8(uv, rngState));
+    currentY = Y * (1.0 - 2.0 * rand8(uv, rngState));
+
+    gridM = int(floor(0.5 * currentX / Sc));
+    gridN = int(floor(0.5 * currentY / Sc));
+
+    // Check density using a deterministic random value
+    if (random_0t1(vec2(gridM, gridN), fseed) > Dens) {
+        continue;
+    }
+
+    float relativeX = currentX - (float(gridM) * 2.0 + 1.0) * Sc;
+    float relativeY = currentY - (float(gridN) * 2.0 + 1.0) * Sc;
+    
+    // Deterministically calculate the size of this square
+    float actualSquareSize = (0.3 + 0.7 * random_0t1(vec2(gridM + 10, gridN + 3), fseed)) * Sc;
+    float maxAbsCoord = max(abs(relativeX), abs(relativeY));
+
+    bool pointSatisfiesShape;
+    if (Hollow >= 0.5) {
+        float borderInnerEdge = actualSquareSize * (1.0 - BorderThick);
+        pointSatisfiesShape = (maxAbsCoord <= actualSquareSize) && (maxAbsCoord >= borderInnerEdge);
+    } else {
+        pointSatisfiesShape = maxAbsCoord <= actualSquareSize;
+    }
+
+    if (pointSatisfiesShape) {
+        // --- Point is valid, start processing ---
+        finalX = relativeX;
+        finalY = relativeY;
+        bool subdivisionApplied = false;
+
+        // --- Subdivision Logic ---
+        if (Hollow >= 0.5 && SubdivActive >= 0.5) {
+            float effectiveSubdivChance = SubdivChance * random_0t1(vec2(gridM + 100, gridN + 101), fseed);
+            if (rand8(uv, rngState) < effectiveSubdivChance) {
+                subdivisionApplied = true;
+                float subScaleFactor = 0.01 + random_0t1(vec2(gridM + 200, gridN + 201), fseed) * (SubdivScale - 0.01);
+                float effectivePlacement = SubdivPlace * random_0t1(vec2(gridM + 300, gridN + 301), fseed);
+                float offsetMagnitude = actualSquareSize * (1.0 - subScaleFactor) * effectivePlacement;
+                
+                float randCorner = rand8(uv, rngState);
+                float subCenterX = 0.0, subCenterY = 0.0;
+
+                if (randCorner < 0.25) { subCenterX = -offsetMagnitude; subCenterY = offsetMagnitude; }
+                else if (randCorner < 0.5) { subCenterX = offsetMagnitude; subCenterY = offsetMagnitude; }
+                else if (randCorner < 0.75) { subCenterX = -offsetMagnitude; subCenterY = -offsetMagnitude; }
+                else { subCenterX = offsetMagnitude; subCenterY = -offsetMagnitude; }
+                
+                finalX = (relativeX * subScaleFactor) + subCenterX;
+                finalY = (relativeY * subScaleFactor) + subCenterY;
+            }
+        }
+
+        // --- Atan Radial Modulation Logic ---
+        if (Hollow >= 0.5 && AtanMode >= 0.5) {
+            float pointXForAtan = finalX;
+            float pointYForAtan = finalY;
+
+            // If subdivided, Atan is relative to sub-square center
+            if(subdivisionApplied) {
+                // This logic is complex to replicate exactly without the sub-center values.
+                // For now, we apply Atan relative to the main square's center.
+                // A more advanced version might store subCenterX/Y.
+            }
+
+            float radiusForModulation = sqrt(pointXForAtan * pointXForAtan + pointYForAtan * pointYForAtan);
+            if (radiusForModulation > 1.0e-9) {
+                float angle = atan(pointYForAtan, pointXForAtan);
+                float m = AtanFactor * sin(angle * AtanFrequency);
+                float scaleFactor = (m >= 0.0) ? (1.0 + m) : (1.0 / (1.0 - m));
+                float modulatedRadius = radiusForModulation * scaleFactor;
+                
+                finalX = modulatedRadius * cos(angle);
+                finalY = modulatedRadius * sin(angle);
+            }
+        }
+        
+        // Translate back to grid position
+        finalX += (float(gridM) * 2.0 + 1.0) * Sc;
+        finalY += (float(gridN) * 2.0 + 1.0) * Sc;
+
+        pointFound = true;
+        break; // Exit the find-point loop
+    }
+}
+
+// --- Final Output ---
+if (pointFound) {
+    _vx += finalX * amount;
+    _vy += finalY * amount;
+} else {
+    // If no point was found after 100 tries, pass through the original point
+    _vx += _tx * amount;
+    _vy += _ty * amount;
+}
+
+// --- End of SquareRand Variation Code ---
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
