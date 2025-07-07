@@ -1,0 +1,229 @@
+[PARAM_DEFS]
+name = seed, value = 1, type = int, min = 0, max = 10000
+name = cellsize, value = 0.5, type = float, min = 0.01, max = 5.0
+name = radius_factor, value = 1.0, type = float, min = 0.01, max = 5.0
+name = offset_strength, value = 0.25, type = float, min = 0.0, max = 2.0
+name = shape_boundary_type, value = 0, type = int, min = 0, max = 11
+name = aspect_ratio, value = 1.0, type = float, min = 0.1, max = 10.0
+name = inner_radius_factor, value = 0.5, type = float, min = 0.0, max = 1.0
+name = arm_width_factor, value = 0.3, type = float, min = 0.01, max = 1.0
+name = spacing, value = 0.1, type = float, min = -1.0, max = 1.0
+name = inner_twist, value = 0.0, type = float, min = -10.0, max = 10.0
+name = outer_twist, value = 3.14159, type = float, min = -10.0, max = 10.0
+name = flowerPetals, value = 5, type = int, min = 2, max = 20
+name = starPoints, value = 5, type = int, min = 3, max = 20
+name = cloudAmplitude, value = 0.2, type = float, min = 0.0, max = 2.0
+name = cloudFrequency, value = 5.0, type = float, min = 0.1, max = 20.0
+
+[VARIATION_CODE]
+// --- Start of DrunkenTiles Variation Code ---
+
+// --- Calculated Values ---
+float safe_cellsize = max(1.0e-9, cellsize);
+float radius = abs(safe_cellsize * 0.5 * radius_factor);
+float safe_radius = max(1.0e-9, radius);
+float r2 = safe_radius * safe_radius;
+
+// --- Passthrough for invalid parameters ---
+if (safe_cellsize <= 1.0e-9 || safe_radius <= 1.0e-9) {
+    _vx += _tx * amount;
+    _vy += _ty * amount;
+    return;
+}
+
+// --- Input and Output variables ---
+float inputX = _tx;
+float inputY = _ty;
+float finalX = inputX;
+float finalY = inputY;
+float fseed = float(seed);
+
+// --- Determine Grid Cell and Perturbed Center ---
+float invCellSize = 1.0 / safe_cellsize;
+int ix = int(floor(inputX * invCellSize));
+int iy = int(floor(inputY * invCellSize));
+float Cx_reg = (float(ix) + 0.5) * safe_cellsize;
+float Cy_reg = (float(iy) + 0.5) * safe_cellsize;
+
+// Use built-in random function for deterministic offsets
+float Ox = (random_0t1(vec2(ix, iy), fseed * 1.337) * 2.0 - 1.0) * offset_strength * safe_cellsize;
+float Oy = (random_0t1(vec2(ix, iy), fseed * 2.718) * 2.0 - 1.0) * offset_strength * safe_cellsize;
+
+float Cx_pert = Cx_reg + Ox;
+float Cy_pert = Cy_reg + Oy;
+
+// Point relative to perturbed center
+float Lx = inputX - Cx_pert;
+float Ly = inputY - Cy_pert;
+float localDistSq = -1.0; // Calculated if needed
+
+// --- Boundary Checks ---
+bool apply_effect = false;
+
+if (shape_boundary_type == 0) { // Circle
+    localDistSq = Lx*Lx + Ly*Ly;
+    if(localDistSq <= r2) apply_effect = true;
+} else if (shape_boundary_type == 1) { // Square
+    if(abs(Lx) <= safe_radius && abs(Ly) <= safe_radius) {
+        apply_effect = true;
+        localDistSq = Lx*Lx + Ly*Ly;
+    }
+} else if (shape_boundary_type == 2) { // Ellipse
+    float ar = max(1.0e-9, abs(aspect_ratio));
+    float rx_sq = r2;
+    float ry_sq = pow(safe_radius / ar, 2.0);
+    if(rx_sq > 1.0e-12 && ry_sq > 1.0e-12) {
+        if(((Lx*Lx)/rx_sq + (Ly*Ly)/ry_sq) <= 1.0) {
+            apply_effect = true;
+            localDistSq = Lx*Lx+Ly*Ly;
+        }
+    }
+} else if (shape_boundary_type == 3) { // Triangle
+    float r = safe_radius;
+    float s32 = 0.8660254; // sqrt(3)/2
+    vec2 v1 = vec2(0.0, r);
+    vec2 v2 = vec2(r * s32, -r / 2.0);
+    vec2 v3 = vec2(-r * s32, -r / 2.0);
+    vec2 p = vec2(Lx, Ly);
+    float d1 = (p.x - v3.x) * (v2.y - v3.y) - (v2.x - v3.x) * (p.y - v3.y);
+    float d2 = (p.x - v1.x) * (v3.y - v1.y) - (v3.x - v1.x) * (p.y - v1.y);
+    float d3 = (p.x - v2.x) * (v1.y - v2.y) - (v1.x - v2.x) * (p.y - v2.y);
+    bool has_neg = (d1 < 0.0) || (d2 < 0.0) || (d3 < 0.0);
+    bool has_pos = (d1 > 0.0) || (d2 > 0.0) || (d3 > 0.0);
+    if (!(has_neg && has_pos)) {
+        apply_effect = true;
+        localDistSq = Lx*Lx+Ly*Ly;
+    }
+} else if (shape_boundary_type == 4) { // Rhombus
+    float a = -PI / 4.0;
+    float c = cos(a);
+    float s = sin(a);
+    float rLx = c * Lx - s * Ly;
+    float rLy = s * Lx + c * Ly;
+    if (abs(rLx) <= safe_radius && abs(rLy) <= safe_radius) {
+        apply_effect = true;
+        localDistSq = Lx*Lx + Ly*Ly;
+    }
+} else if (shape_boundary_type == 5) { // Hexagon
+    vec2 p = abs(vec2(Lx, Ly));
+    if (p.x + p.y * 0.57735 < safe_radius && p.y < safe_radius * 0.8660254) {
+        apply_effect = true;
+        localDistSq = Lx*Lx + Ly*Ly;
+    }
+} else if (shape_boundary_type == 6) { // Star5
+    float rO = safe_radius;
+    float rI = safe_radius * max(0.01, min(1.0, inner_radius_factor));
+    float angle = atan(Ly, Lx);
+    float anglePerVertex = PI / 5.0;
+    float sectorAngle = mod(angle, 2.0 * anglePerVertex) - anglePerVertex;
+    float q = (sectorAngle < 0.0) ? rI : rO;
+    float m = tan(anglePerVertex);
+    vec2 p = vec2(cos(anglePerVertex), sin(anglePerVertex)) * q;
+    float starBoundaryR = (p.x * p.y) / (p.y * cos(sectorAngle) - p.x * sin(sectorAngle));
+    if (sqrt(Lx*Lx+Ly*Ly) < starBoundaryR) {
+        apply_effect = true;
+        localDistSq = Lx*Lx+Ly*Ly;
+    }
+} else if (shape_boundary_type == 7) { // Cross
+    float arm = safe_radius * max(0.01, min(1.0, arm_width_factor));
+    if ((abs(Lx) <= arm && abs(Ly) <= safe_radius) || (abs(Lx) <= safe_radius && abs(Ly) <= arm)) {
+        apply_effect = true;
+        localDistSq = Lx*Lx+Ly*Ly;
+    }
+} else if (shape_boundary_type == 8) { // Ring
+    float rI = safe_radius * max(0.0, min(0.99, inner_radius_factor));
+    float inner_r2 = rI * rI;
+    localDistSq = Lx*Lx + Ly*Ly;
+    if (localDistSq >= inner_r2 && localDistSq <= r2) {
+        apply_effect = true;
+    }
+} else if (shape_boundary_type == 9) { // Flower
+    float currentRadius = sqrt(Lx * Lx + Ly * Ly);
+    if (currentRadius <= safe_radius) {
+        float angle = atan(Ly, Lx);
+        float k = float(max(2, flowerPetals));
+        float flowerBoundaryR = safe_radius * abs(cos(k * angle));
+        if (currentRadius <= flowerBoundaryR + 1e-9) {
+            apply_effect = true;
+            localDistSq = currentRadius * currentRadius;
+        }
+    }
+} else if (shape_boundary_type == 10) { // StarN
+    float currentRadius = sqrt(Lx * Lx + Ly * Ly);
+    if (currentRadius <= safe_radius) {
+        float angle = atan(Ly, Lx);
+        float k = float(max(3, starPoints));
+        float depth = max(0.0, min(1.0, inner_radius_factor));
+        float R_outer = safe_radius;
+        float R_inner = safe_radius * depth;
+        float anglePerSpoke = PI / k;
+        float angleInSector = mod(angle, anglePerSpoke * 2.0) - anglePerSpoke;
+        float m = tan(anglePerSpoke);
+        vec2 p = (angleInSector < 0.0) ? vec2(R_inner, -m * R_inner) : vec2(R_outer, m * R_outer);
+        float starBoundaryR = (p.x * p.y) / (p.y * cos(angleInSector) - p.x * sin(angleInSector));
+        if (currentRadius <= starBoundaryR + 1e-9) {
+            apply_effect = true;
+            localDistSq = currentRadius * currentRadius;
+        }
+    }
+} else if (shape_boundary_type == 11) { // Cloud
+    float currentRadius = sqrt(Lx * Lx + Ly * Ly);
+    float maxPossibleR = safe_radius * (1.0 + abs(cloudAmplitude));
+    if (currentRadius <= maxPossibleR) {
+        float angle = atan(Ly, Lx);
+        float amp = max(0.0, cloudAmplitude);
+        float freq = max(1.0e-6, cloudFrequency);
+        float noise = 0.6 * sin(freq * angle) + 0.3 * sin(2.1 * freq * angle + 1.23) + 0.1 * sin(4.3 * freq * angle + 4.56);
+        float cloudBoundaryR = safe_radius * (1.0 + amp * noise);
+        if (currentRadius <= cloudBoundaryR + 1.0e-9) {
+            apply_effect = true;
+            localDistSq = currentRadius * currentRadius;
+        }
+    }
+}
+
+// --- Apply Effects if Inside Boundary ---
+if (apply_effect) {
+    float scaleFactor = 1.0 / safe_radius;
+    float scaledLx = Lx * scaleFactor;
+    float scaledLy = Ly * scaleFactor;
+
+    // LazyJess wrapping/tiling logic
+    if (scaledLx > 1.0) scaledLx -= 2.0; if (scaledLx < -1.0) scaledLx += 2.0;
+    if (scaledLy > 1.0) scaledLy -= 2.0; if (scaledLy < -1.0) scaledLy += 2.0;
+
+    float k = 1.0 + spacing;
+    float ljLx = scaledLx * k * safe_radius;
+    float ljLy = scaledLy * k * safe_radius;
+
+    // Twist Logic
+    float twist_norm;
+    if (shape_boundary_type == 1 || shape_boundary_type == 4) { // Square or Rhombus
+        twist_norm = min(1.0, max(abs(Lx), abs(Ly)) / safe_radius);
+    } else { // All other shapes
+        if (localDistSq < 0.0) localDistSq = Lx*Lx + Ly*Ly;
+        twist_norm = min(1.0, sqrt(localDistSq) / safe_radius);
+    }
+
+    float theta = inner_twist * (1.0 - twist_norm) + outer_twist * twist_norm;
+    float s = sin(theta);
+    float c = cos(theta);
+
+    float twistedLx = c * ljLx - s * ljLy;
+    float twistedLy = s * ljLx + c * ljLy;
+
+    finalX = Cx_pert + twistedLx;
+    finalY = Cy_pert + twistedLy;
+}
+
+// --- Final Transformation ---
+_vx += finalX * amount;
+_vy += finalY * amount;
+
+// --- End of DrunkenTiles Variation Code ---
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
