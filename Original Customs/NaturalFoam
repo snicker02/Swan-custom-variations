@@ -1,0 +1,171 @@
+[PARAM_DEFS]
+name = density, value = 50, type = int, min = 1, max = 100
+name = iterations, value = 3, type = int, min = 0, max = 10
+name = scale, value = 0.8, type = float, min = 0.0, max = 2.0
+name = spread, value = 1.0, type = float, min = 0.1, max = 5.0
+name = minRadius, value = 0.1, type = float, min = 0.0, max = 2.0
+name = maxRadius, value = 0.9, type = float, min = 0.0, max = 2.0
+name = seed, value = 123, type = int, min = 0, max = 10000
+name = shapeAmount, value = 0.0, type = float, min = 0.0, max = 1.0
+name = blur_radius, value = 0.1, type = float, min = 0.0, max = 1.0
+name = blur_quality, value = 1, type = int, min = 0, max = 10
+name = color_data, value = 0, type = int, min = 0, max = 3
+name = zoom, value = 1.0, type = float, min = -5.0, max = 5.0
+
+[VARIATION_CODE]
+// --- Start of NaturalFoam Variation Code ---
+
+// --- Bubble Initialization ---
+// We use the built-in deterministic random function to generate the same set of bubbles
+// for every point, based on the seed.
+float bubbleX[100];
+float bubbleY[100];
+float bubbleZ[100];
+float bubbleRadius[100];
+
+for (int i = 0; i < density; i = i + 1) {
+    if (i >= 100) break; // Safety break for max array size
+    float fi = float(i);
+    float fseed = float(seed);
+    // Use the provided 'random_0t1' function instead of a custom hash.
+    // We pass a different vec2 for each property to get different random values.
+    bubbleX[i] = (2.0 * random_0t1(vec2(fi, 1.0), fseed) - 1.0) * spread;
+    bubbleY[i] = (2.0 * random_0t1(vec2(fi, 2.0), fseed) - 1.0) * spread;
+    bubbleZ[i] = (2.0 * random_0t1(vec2(fi, 3.0), fseed) - 1.0) * spread;
+    bubbleRadius[i] = minRadius + (maxRadius - minRadius) * random_0t1(vec2(fi, 4.0), fseed);
+}
+
+// Get initial point coordinates
+float x = _tx;
+float y = _ty;
+float z = _tz;
+
+// --- Standard Foam Repulsion Logic ---
+for (int i = 0; i < iterations; i = i + 1) {
+    for (int j = 0; j < density; j = j + 1) {
+        if (j >= 100) break;
+        float dx = x - bubbleX[j];
+        float dy = y - bubbleY[j];
+        float dz = z - bubbleZ[j];
+        float distSq = dx * dx + dy * dy + dz * dz;
+        float radiusSq = bubbleRadius[j] * bubbleRadius[j];
+        if (distSq < radiusSq) {
+            float dist = sqrt(distSq);
+            if (dist > 1.0e-6) {
+                float pushFactor = (bubbleRadius[j] - dist) / dist;
+                x += dx * pushFactor * scale;
+                y += dy * pushFactor * scale;
+                z += dz * pushFactor * scale;
+            }
+        }
+    }
+}
+
+// --- Contained Diffusion Blur ---
+if (blur_radius > 0.0 && blur_quality > 0) {
+    float step_size = blur_radius / float(blur_quality);
+    for(int i=0; i < blur_quality; i = i + 1) {
+        float prev_x = x;
+        float prev_y = y;
+        float prev_z = z;
+        x += (rand8(uv, rngState) - 0.5) * 2.0 * step_size;
+        y += (rand8(uv, rngState) - 0.5) * 2.0 * step_size;
+        z += (rand8(uv, rngState) - 0.5) * 2.0 * step_size;
+        bool is_contained = false;
+        for(int j=0; j < density; j = j + 1) {
+            if (j >= 100) break;
+            float dx = x - bubbleX[j];
+            float dy = y - bubbleY[j];
+            float dz = z - bubbleZ[j];
+            if((dx*dx + dy*dy + dz*dz) < (bubbleRadius[j] * bubbleRadius[j])) {
+                is_contained = true;
+                break;
+            }
+        }
+        if(!is_contained) {
+            x = prev_x;
+            y = prev_y;
+            z = prev_z;
+        }
+    }
+}
+
+// --- Apply final shaping (spherical inversion) ---
+if(shapeAmount > 0.0) {
+    int nearestBubbleIndex = -1;
+    float minDistanceSq = 1.0e38; // A very large number
+    for (int j = 0; j < density; j = j + 1) {
+        if (j >= 100) break;
+        float dx = x - bubbleX[j];
+        float dy = y - bubbleY[j];
+        float dz = z - bubbleZ[j];
+        float distSq = dx * dx + dy * dy + dz * dz;
+        if (distSq < minDistanceSq) {
+            minDistanceSq = distSq;
+            nearestBubbleIndex = j;
+        }
+    }
+    if(nearestBubbleIndex != -1) {
+        float localX = x - bubbleX[nearestBubbleIndex];
+        float localY = y - bubbleY[nearestBubbleIndex];
+        float localZ = z - bubbleZ[nearestBubbleIndex];
+        float radiusSq = bubbleRadius[nearestBubbleIndex] * bubbleRadius[nearestBubbleIndex];
+        float inversionFactor = radiusSq / (minDistanceSq + 1.0e-9);
+        float bubbleX_pt = localX * inversionFactor + bubbleX[nearestBubbleIndex];
+        float bubbleY_pt = localY * inversionFactor + bubbleY[nearestBubbleIndex];
+        float bubbleZ_pt = localZ * inversionFactor + bubbleZ[nearestBubbleIndex];
+        x = x * (1.0 - shapeAmount) + bubbleX_pt * shapeAmount;
+        y = y * (1.0 - shapeAmount) + bubbleY_pt * shapeAmount;
+        z = z * (1.0 - shapeAmount) + bubbleZ_pt * shapeAmount;
+    }
+}
+
+// --- Data-Driven Coloring ---
+if (color_data > 0) {
+    float colorIndex = 0.5;
+    int nearestBubbleIndex = -1;
+    float minDistanceSq = 1.0e38;
+    for (int j = 0; j < density; j = j + 1) {
+        if (j >= 100) break;
+        float dx = x - bubbleX[j];
+        float dy = y - bubbleY[j];
+        float dz = z - bubbleZ[j];
+        float distSq = dx * dx + dy * dy + dz * dz;
+        if (distSq < minDistanceSq) {
+            minDistanceSq = distSq;
+            nearestBubbleIndex = j;
+        }
+    }
+    if (nearestBubbleIndex != -1) {
+        if (color_data == 1) { // Color by bubble radius
+            float radiusRange = maxRadius - minRadius;
+            if(radiusRange > 1.0e-6) { colorIndex = (bubbleRadius[nearestBubbleIndex] - minRadius) / radiusRange; }
+        } else if (color_data == 2) { // Color by pressure (how many bubbles contain the point)
+            int pressureCount = 0;
+            for (int j=0; j < density; j = j + 1) {
+                if (j >= 100) break;
+                float dx = x - bubbleX[j];
+                float dy = y - bubbleY[j];
+                float dz = z - bubbleZ[j];
+                if((dx*dx + dy*dy + dz*dz) < (bubbleRadius[j] * bubbleRadius[j])) { pressureCount++; }
+            }
+            if(density > 0) { colorIndex = float(pressureCount) / float(density); }
+        } else if (color_data == 3) { // Color by bubble index
+            if(density > 1) { colorIndex = float(nearestBubbleIndex) / float(density - 1); }
+        }
+    }
+    _color = max(0.0, min(1.0, colorIndex));
+}
+
+// --- Final Transformation ---
+_vx += x * zoom * amount;
+_vy += y * zoom * amount;
+_vz += z * zoom * amount;
+
+// --- End of NaturalFoam Variation Code ---
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
