@@ -1,0 +1,117 @@
+[PARAM_DEFS]
+name = mode, value = 2, type = int, min = 0, max = 2
+name = gridSize, value = 1.0, type = float, min = 0.0, max = 10.0
+name = xOffset, value = 0.0, type = float, min = -2.0, max = 2.0
+name = yOffset, value = 0.0, type = float, min = -2.0, max = 2.0
+name = spin, value = 0.1, type = float, min = -10.0, max = 10.0
+name = twist, value = 0.2, type = float, min = -10.0, max = 10.0
+name = space, value = 0.4, type = float, min = -2.0, max = 2.0
+name = n, value = 4, type = int, min = 2, max = 20
+name = corner, value = 1, type = int, min = 1, max = 20
+name = mod_spin_strength, value = 0.0, type = float, min = -5.0, max = 5.0
+name = mod_twist_strength, value = 0.0, type = float, min = -5.0, max = 5.0
+name = sensen_post_effect, value = 0, type = int, min = 0, max = 1
+name = sensen_fold, value = 1.0, type = float, min = -10.0, max = 10.0
+
+[VARIATION_CODE]
+// Variation Name: BusyBrad
+// --- Start of MultiGrid Variation Code ---
+
+// --- 1. Grid Deconstruction ---
+float safeGridSize = max(1.0e-9, gridSize);
+float cellCenterX = safeGridSize * round(_tx / safeGridSize);
+float cellCenterY = safeGridSize * round(_ty / safeGridSize);
+
+// Coordinates relative to the cell center
+float x = _tx - cellCenterX;
+float y = _ty - cellCenterY;
+
+// Apply local offsets
+float local_x = x - xOffset;
+float local_y = y + yOffset;
+
+float transformedX = 0.0, transformedY = 0.0;
+
+// --- 2. Select and apply the base transformation ---
+if (mode == 0) { // ========== SUSAN MODE ==========
+    float rr = sqrt(local_x * local_x + local_y * local_y);
+    if (rr < amount) {
+        float a = atan(local_y, local_x) + spin + twist * (amount - rr);
+        float r2 = amount * rr;
+        transformedX = r2 * cos(a);
+        transformedY = r2 * sin(a);
+    } else {
+        float r2 = (rr != 0.0) ? amount * (1.0 + space / rr) : 0.0;
+        transformedX = r2 * local_x;
+        transformedY = r2 * local_y;
+    }
+} else if (mode == 1) { // ========== JESS MODE ==========
+    float modulus = sqrt(local_x * local_x + local_y * local_y);
+    float n_d = float(max(2, n));
+    float theta_check = atan(local_y, local_x);
+    float r_poly = amount * cos(PI / n_d) / cos(theta_check - 2.0 * PI / n_d * floor(n_d * theta_check / (2.0 * PI) + 0.5));
+    
+    if (modulus < r_poly) {
+        float twist_effect = (r_poly > 1.0e-9) ? twist * (r_poly - modulus) / r_poly : 0.0;
+        float theta = atan(local_y, local_x) + spin + twist_effect;
+        transformedX = modulus * cos(theta);
+        transformedY = modulus * sin(theta);
+    } else {
+        float new_modulus = (modulus != 0.0) ? amount * (1.0 + space / modulus) : 0.0;
+        transformedX = new_modulus * local_x;
+        transformedY = new_modulus * local_y;
+    }
+} else { // ========== COMBINED MODE (Mode 2) ==========
+    // Step A: Get a modulation value from the Susan logic
+    float rr = sqrt(local_x * local_x + local_y * local_y);
+    float modulation_value = (rr != 0.0) ? amount * (1.0 + space / rr) : 0.0;
+
+    // Step B: Create dynamic parameters
+    float dynamic_spin = spin + (modulation_value * mod_spin_strength);
+    float dynamic_twist = twist + (modulation_value * mod_twist_strength);
+    
+    // Step C: Run Jess logic with dynamic parameters
+    float modulus = rr;
+    float n_d = float(max(2, n));
+    float theta_check = atan(local_y, local_x);
+    float r_poly = amount * cos(PI / n_d) / cos(theta_check - 2.0 * PI / n_d * floor(n_d * theta_check / (2.0 * PI) + 0.5));
+
+    if (modulus < r_poly) {
+        float twist_effect = (r_poly > 1.0e-9) ? dynamic_twist * (r_poly - modulus) / r_poly : 0.0;
+        float theta = atan(local_y, local_x) + dynamic_spin + twist_effect;
+        transformedX = modulus * cos(theta);
+        transformedY = modulus * sin(theta);
+    } else {
+        transformedX = modulation_value * local_x;
+        transformedY = modulation_value * local_y;
+    }
+}
+
+// --- 3. Optionally apply Sensen folding ---
+if (sensen_post_effect >= 0.5 && sensen_fold != 0.0) {
+    // Fold X
+    float nr_x = floor(transformedX * sensen_fold);
+    if (mod(nr_x, 2.0) != 0.0) {
+        transformedX = -transformedX;
+    }
+    // Fold Y
+    float nr_y = floor(transformedY * sensen_fold);
+    if (mod(nr_y, 2.0) != 0.0) {
+        transformedY = -transformedY;
+    }
+}
+
+// --- 4. Final placement in grid ---
+float finalX = cellCenterX + transformedX - xOffset;
+float finalY = cellCenterY + transformedY + yOffset;
+
+_vx += finalX;
+_vy += finalY;
+
+// --- End of MultiGrid Variation Code ---
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
