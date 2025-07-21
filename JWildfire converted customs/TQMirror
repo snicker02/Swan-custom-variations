@@ -1,0 +1,78 @@
+[PARAM_DEFS]
+name = a, value = 1.0, type = float, min = -2.0, max = 2.0
+name = b, value = 1.0, type = float, min = -2.0, max = 2.0
+name = c, value = 1.0, type = float, min = -2.0, max = 2.0
+name = d, value = 1.0, type = float, min = -2.0, max = 2.0
+name = e, value = 1.0, type = float, min = -2.0, max = 2.0
+name = f, value = 1.0, type = float, min = -2.0, max = 2.0
+name = g, value = 1.0, type = float, min = -2.0, max = 2.0
+name = h, value = 1.0, type = float, min = -2.0, max = 2.0
+name = i, value = 1.0, type = float, min = -2.0, max = 2.0
+name = j, value = 1.0, type = float, min = -2.0, max = 2.0
+name = k, value = 1.0, type = float, min = -2.0, max = 2.0
+name = l, value = 0.0, type = float, min = -2.0, max = 2.0
+name = m, value = 0.0, type = float, min = -2.0, max = 2.0
+name = n, value = 0.0, type = float, min = -2.0, max = 2.0
+name = o, value = 0.0, type = float, min = -2.0, max = 2.0
+name = p, value = 0.0, type = float, min = -2.0, max = 2.0
+name = q, value = 0.0, type = float, min = -2.0, max = 2.0
+name = r, value = 1.0, type = float, min = -2.0, max = 2.0
+name = s, value = 1.0, type = float, min = -2.0, max = 2.0
+name = type, value = 0, type = int, min = 0, max = 1
+name = mode, value = 0, type = int, min = 0, max = 2
+
+[VARIATION_CODE]
+// --- Start of TQMirror Variation Code ---
+
+// This variation was created by Nic Anderson (chronologicaldot)
+// and modified by Brad Stefanov.
+
+float x = _tx;
+float y = _ty;
+
+if (amount * d + x < l || amount * e + y < m) {
+    if (type != 0) {
+        _vx += x * r;
+        _vy += y * s;
+    } else {
+        _vx += y * r;
+        _vy += x * s;
+    }
+} else if (x < n && y < o) {
+    _vx += x + amount * f;
+    _vy += y + amount * g;
+} else {
+    if (mode == 0) {
+        if (x + q < amount && y < amount * a && x + amount * b > l && y + amount * c > p) {
+            _vx -= y * h;
+            _vy -= x * i;
+        } else {
+            _vx += x * j;
+            _vy += y * k;
+        }
+    } else if (mode == 1) {
+        if (x + q < amount && y < amount * a && x + amount * b > l && y + amount * c > p) {
+            _vx -= y * h;
+            _vy -= x * i;
+        } else {
+            _vx -= x * j;
+            _vy -= y * k;
+        }
+    } else if (mode == 2) {
+        if (x + q < amount && y < amount * a && x + amount * b > l && y + amount * c > p) {
+            _vx += y * h;
+            _vy -= x * i;
+        } else {
+            _vx += x * j;
+            _vy -= y * k;
+        }
+    }
+}
+
+// --- End of TQMirror Variation Code ---
+
+[INV_VARIATION_CODE]
+
+[CUSTOM_FUNCTIONS]
+
+[FUNC_DEPENDENCIES]
